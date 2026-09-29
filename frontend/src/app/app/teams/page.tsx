@@ -4,7 +4,6 @@ import { useState, type FormEvent } from "react";
 import { EmptyState, PageHeader, PageShell } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TeamCard } from "@/features/collaboration/team-ui";
 import {
@@ -35,6 +34,7 @@ export default function TeamsPage() {
   const queryClient = useQueryClient();
   const canWrite = workspace && workspace.role !== "VIEWER";
   const canAdmin = workspace?.role === "OWNER" || workspace?.role === "ADMIN";
+  const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [icon, setIcon] = useState("");
@@ -59,6 +59,7 @@ export default function TeamsPage() {
       setName("");
       setDescription("");
       setIcon("");
+      setCreating(false);
     } catch {
       // Error is shown from the mutation.
     }
@@ -68,54 +69,52 @@ export default function TeamsPage() {
     <PageShell>
       <PageHeader
         title="Teams"
-        description="Group people who share projects. A General team is created with the workspace."
+        description="People who share projects."
+        actions={
+          canWrite ? (
+            <Button size="sm" onClick={() => setCreating((value) => !value)}>
+              {creating ? "Cancel" : "New team"}
+            </Button>
+          ) : null
+        }
       />
-      {canWrite ? (
-        <form
-          className="rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-soft)] sm:p-5"
-          onSubmit={onCreate}
-        >
-          <div className="grid gap-3 sm:grid-cols-[80px_1fr_1fr_auto]">
-            <div className="space-y-2">
-              <Label htmlFor="team-icon">Icon</Label>
-              <Input
-                id="team-icon"
-                value={icon}
-                onChange={(event) => setIcon(event.target.value)}
-                placeholder="🛠️"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="team-name">Team name</Label>
-              <Input
-                id="team-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Development"
-                required
-              />
-            </div>
-            <div className="space-y-2 sm:col-span-1">
-              <Label htmlFor="team-description">Description</Label>
-              <Input
-                id="team-description"
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder="Optional"
-              />
-            </div>
-            <div className="flex items-end">
-              <Button type="submit" disabled={createTeam.isPending || !name.trim()}>
-                Create team
-              </Button>
-            </div>
-          </div>
-          {createTeam.error ? (
-            <p className="mt-2 text-sm text-destructive">
-              {createTeam.error.message}
-            </p>
-          ) : null}
+      {canWrite && creating ? (
+        <form className="flex flex-col gap-2 sm:flex-row" onSubmit={onCreate}>
+          <Input
+            id="team-icon"
+            value={icon}
+            onChange={(event) => setIcon(event.target.value)}
+            placeholder="Icon"
+            className="h-9 sm:w-20"
+            aria-label="Team icon"
+          />
+          <Input
+            id="team-name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Team name"
+            required
+            className="h-9"
+          />
+          <Input
+            id="team-description"
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            placeholder="Description (optional)"
+            className="h-9"
+          />
+          <Button
+            type="submit"
+            size="sm"
+            className="h-9 shrink-0"
+            disabled={createTeam.isPending || !name.trim()}
+          >
+            Create
+          </Button>
         </form>
+      ) : null}
+      {createTeam.error ? (
+        <p className="text-sm text-destructive">{createTeam.error.message}</p>
       ) : null}
       {teams.isLoading ? (
         <Skeleton className="h-40 w-full" />
@@ -124,7 +123,7 @@ export default function TeamsPage() {
       ) : !teams.data?.length ? (
         <EmptyState title="No teams yet" />
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {teams.data.map((team) => {
             const isTeamAdmin = team.members.some(
               (member) =>

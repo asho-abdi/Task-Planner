@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { CalendarDays, Clock, MapPin, Video } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Clock, MapPin, Video } from "lucide-react";
 import { MemberAvatarGroup } from "@/components/member-avatar-group";
-import { EmptyState, Surface } from "@/components/page-header";
+import { SegmentedControl, Surface } from "@/components/page-header";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -83,36 +83,37 @@ export function MeetingCard({ meeting }: { meeting: Meeting }) {
   return (
     <Link
       href={`/app/meetings/${meeting.id}`}
-      className="block rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-soft)] transition-colors hover:border-primary/40 sm:p-5"
+      className="flex items-start gap-4 px-4 py-3.5 transition-colors hover:bg-[#F8FAFC]"
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="truncate text-base font-semibold">{meeting.title}</h2>
-            <StatusBadge value={meeting.status} />
-            <Badge variant={meeting.mode === "ONLINE" ? "info" : "outline"}>
-              {meeting.mode === "ONLINE" ? "Online" : "Offline"}
-            </Badge>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {formatDate(meeting.startAt)} · {formatMeetingTime(meeting)} ·{" "}
-            {formatDuration(meeting.durationMinutes ?? 0)}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {meeting.project?.name ?? "No project"} · Organizer{" "}
-            {meeting.organizer.name}
-          </p>
-        </div>
-        <MemberAvatarGroup people={people} />
-      </div>
-      {meeting.mode === "ONLINE" && joinUrl ? (
-        <p className="mt-3 text-xs text-primary">Join link ready</p>
-      ) : meeting.location ? (
-        <p className="mt-3 text-xs text-muted-foreground">
-          {meeting.location}
-          {meeting.room ? ` · ${meeting.room}` : ""}
+      <div className="w-[88px] shrink-0 pt-0.5">
+        <p className="text-[12px] font-medium text-[#172033]">
+          {formatDate(meeting.startAt)}
         </p>
-      ) : null}
+        <p className="mt-0.5 text-[12px] text-[#64748B]">
+          {formatMeetingTime(meeting)}
+        </p>
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="truncate text-[13px] font-medium text-[#172033]">
+            {meeting.title}
+          </h2>
+          <StatusBadge value={meeting.status} />
+          <Badge variant={meeting.mode === "ONLINE" ? "info" : "outline"}>
+            {meeting.mode === "ONLINE" ? "Online" : "In person"}
+          </Badge>
+        </div>
+        <p className="mt-0.5 truncate text-[12px] text-[#64748B]">
+          {formatDuration(meeting.durationMinutes ?? 0)} ·{" "}
+          {meeting.project?.name ?? "No project"} · {meeting.organizer.name}
+          {meeting.mode === "ONLINE" && joinUrl
+            ? " · Join link ready"
+            : meeting.location
+              ? ` · ${meeting.location}${meeting.room ? ` · ${meeting.room}` : ""}`
+              : ""}
+        </p>
+      </div>
+      <MemberAvatarGroup people={people} />
     </Link>
   );
 }
@@ -125,23 +126,14 @@ export function MeetingRangeTabs({
   onChange: (range: MeetingRange) => void;
 }) {
   return (
-    <div className="flex gap-1 overflow-x-auto rounded-xl border border-border bg-card p-1">
-      {(Object.keys(RANGE_LABELS) as MeetingRange[]).map((range) => (
-        <button
-          key={range}
-          type="button"
-          className={cn(
-            "rounded-lg px-3 py-1.5 text-sm whitespace-nowrap",
-            value === range
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-          onClick={() => onChange(range)}
-        >
-          {RANGE_LABELS[range]}
-        </button>
-      ))}
-    </div>
+    <SegmentedControl
+      value={value}
+      onChange={onChange}
+      options={(Object.keys(RANGE_LABELS) as MeetingRange[]).map((range) => ({
+        value: range,
+        label: RANGE_LABELS[range],
+      }))}
+    />
   );
 }
 
@@ -848,23 +840,27 @@ export function TeamCalendar({
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <Button
-            variant="outline"
-            size="sm"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
             onClick={() => setCursor(new Date(year, month - 1, 1))}
+            aria-label="Previous month"
           >
-            Previous
+            <ChevronLeft className="h-4 w-4" />
           </Button>
-          <p className="min-w-40 text-center text-sm font-medium">
+          <p className="min-w-[148px] text-center text-[13px] font-semibold text-[#172033]">
             {cursor.toLocaleString(undefined, { month: "long", year: "numeric" })}
           </p>
           <Button
-            variant="outline"
-            size="sm"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
             onClick={() => setCursor(new Date(year, month + 1, 1))}
+            aria-label="Next month"
           >
-            Next
+            <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
         <div className="flex flex-wrap gap-1">
@@ -873,10 +869,10 @@ export function TeamCalendar({
               key={type}
               type="button"
               className={cn(
-                "rounded-full px-3 py-1 text-xs capitalize",
+                "rounded-md px-2.5 py-1 text-[12px] font-medium capitalize",
                 types.includes(type)
                   ? EVENT_STYLES[type]
-                  : "bg-secondary text-muted-foreground",
+                  : "bg-[#F8FAFC] text-[#64748B]",
               )}
               onClick={() => toggleType(type)}
             >
@@ -887,12 +883,12 @@ export function TeamCalendar({
       </div>
       <div
         className={cn(
-          "grid gap-3",
+          "grid gap-2",
           lockedProjectId ? "sm:grid-cols-2" : "sm:grid-cols-3",
         )}
       >
         <select
-          className={nativeSelectClass}
+          className={cn(nativeSelectClass, "h-8 text-[13px]")}
           value={teamId}
           onChange={(event) => setTeamId(event.target.value)}
         >
@@ -905,7 +901,7 @@ export function TeamCalendar({
         </select>
         {lockedProjectId ? null : (
           <select
-            className={nativeSelectClass}
+            className={cn(nativeSelectClass, "h-8 text-[13px]")}
             value={selectedProjectId}
             onChange={(event) => setSelectedProjectId(event.target.value)}
           >
@@ -918,7 +914,7 @@ export function TeamCalendar({
           </select>
         )}
         <select
-          className={nativeSelectClass}
+          className={cn(nativeSelectClass, "h-8 text-[13px]")}
           value={userId}
           onChange={(event) => setUserId(event.target.value)}
         >
@@ -935,11 +931,11 @@ export function TeamCalendar({
       ) : calendar.isError ? (
         <p className="text-sm text-destructive">{calendar.error.message}</p>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
-          <Surface className="overflow-x-auto">
-            <div className="grid grid-cols-7 gap-1 text-center text-[11px] uppercase tracking-wide text-muted-foreground">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
+          <Surface className="overflow-x-auto p-3 sm:p-4">
+            <div className="grid grid-cols-7 gap-px text-center text-[11px] font-medium uppercase tracking-[0.08em] text-[#94A3B8]">
               {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-                <div key={day} className="py-1">
+                <div key={day} className="py-2">
                   {day}
                 </div>
               ))}
@@ -959,22 +955,30 @@ export function TeamCalendar({
                     disabled={!day}
                     onClick={() => day && setSelectedDay(key)}
                     className={cn(
-                      "min-h-20 rounded-xl p-1.5 text-left",
-                      day ? "bg-secondary/50 hover:bg-secondary" : "",
-                      isToday && "ring-1 ring-primary",
-                      activeDay === key && "bg-accent",
+                      "min-h-[84px] rounded-md p-1.5 text-left",
+                      day ? "hover:bg-[#F8FAFC]" : "",
+                      activeDay === key && day && "bg-[#F8FAFC]",
                     )}
                   >
                     {day ? (
                       <>
-                        <p className="text-xs font-medium">{day}</p>
-                        <div className="mt-1 space-y-1">
+                        <p
+                          className={cn(
+                            "inline-flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-medium",
+                            isToday
+                              ? "bg-primary text-white"
+                              : "text-[#172033]",
+                          )}
+                        >
+                          {day}
+                        </p>
+                        <div className="mt-1 space-y-0.5">
                           {dayEvents.slice(0, 3).map((event) => (
                             <Link
                               key={event.id}
                               href={event.href}
                               className={cn(
-                                "block truncate rounded-md px-1.5 py-0.5 text-[11px]",
+                                "block truncate rounded px-1 py-0.5 text-[11px]",
                                 EVENT_STYLES[event.type],
                               )}
                               onClick={(click) => click.stopPropagation()}
@@ -983,7 +987,7 @@ export function TeamCalendar({
                             </Link>
                           ))}
                           {dayEvents.length > 3 ? (
-                            <p className="text-[11px] text-muted-foreground">
+                            <p className="text-[11px] text-[#64748B]">
                               +{dayEvents.length - 3}
                             </p>
                           ) : null}
@@ -995,22 +999,24 @@ export function TeamCalendar({
               })}
             </div>
           </Surface>
-          <Surface>
-            <h2 className="text-sm font-semibold">
+          <Surface className="p-4 sm:p-4">
+            <h2 className="text-[13px] font-semibold text-[#172033]">
               {formatDate(`${activeDay}T00:00:00`)}
             </h2>
-            <div className="mt-3 space-y-2">
+            <div className="mt-3 space-y-1">
               {selectedEvents.length === 0 ? (
-                <EmptyState title="Nothing scheduled" />
+                <p className="text-[13px] text-[#64748B]">Nothing scheduled.</p>
               ) : (
                 selectedEvents.map((event) => (
                   <Link
                     key={event.id}
                     href={event.href}
-                    className="block rounded-lg border border-border px-3 py-2"
+                    className="block rounded-md px-2 py-2 hover:bg-[#F8FAFC]"
                   >
-                    <p className="text-sm font-medium">{event.title}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[13px] font-medium text-[#172033]">
+                      {event.title}
+                    </p>
+                    <p className="text-[12px] text-[#64748B]">
                       {event.type} · {formatDateTime(event.startAt)}
                     </p>
                   </Link>

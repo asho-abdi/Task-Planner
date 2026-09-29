@@ -106,7 +106,7 @@ export function WorkspaceChat({ selectedId }: { selectedId?: string | null }) {
   }, [activeId, conversations.data]);
 
   return (
-    <div className="-mx-4 -my-6 flex h-[calc(100svh-61px)] min-h-0 overflow-hidden border-t border-border bg-white sm:-mx-8 sm:-my-8">
+    <div className="-mx-4 -my-6 flex h-[calc(100svh-56px)] min-h-0 overflow-hidden border-t border-[#E5E7EB] bg-white sm:-mx-6 sm:-my-6">
       <ConversationList
         conversations={conversations.data ?? []}
         loading={conversations.isLoading}
@@ -184,19 +184,18 @@ function ConversationList({
   const projects = filtered.filter((item) => item.kind === "PROJECT");
 
   return (
-    <aside className="flex w-[260px] shrink-0 flex-col border-r border-[#E5E7EB] bg-[#F8FAFC]">
-      <div className="border-b border-[#E5E7EB] px-4 py-4">
-        <p className="text-sm font-semibold text-[#172033]">Team chat</p>
-        <p className="mt-0.5 text-xs text-[#64748B]">
-          Channels, DMs, and project rooms
-        </p>
-        <div className="relative mt-3">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+    <aside className="flex w-[248px] shrink-0 flex-col border-r border-[#E5E7EB] bg-[#F8FAFC]">
+      <div className="border-b border-[#E5E7EB] px-3 py-3">
+        <div className="flex items-center justify-between">
+          <p className="text-[13px] font-semibold text-[#172033]">Chat</p>
+        </div>
+        <div className="relative mt-2.5">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#94A3B8]" />
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search"
-            className="h-8 bg-white pl-8 text-sm"
+            className="h-8 bg-white pl-8 text-[13px] shadow-none"
           />
         </div>
       </div>
@@ -330,8 +329,10 @@ function ConversationButton({
       type="button"
       onClick={() => onSelect(conversation.id)}
       className={cn(
-        "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm",
-        active ? "bg-white text-[#172033] shadow-sm" : "text-[#334155] hover:bg-white/70",
+        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px]",
+        active
+          ? "bg-white text-[#172033]"
+          : "text-[#475569] hover:bg-white/80",
       )}
     >
       {conversation.kind === "DIRECT" ? (
@@ -392,14 +393,14 @@ function ChatPane({
   return (
     <>
       <section className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center justify-between border-b border-[#E5E7EB] px-4">
+        <header className="flex h-12 shrink-0 items-center justify-between border-b border-[#E5E7EB] px-4">
           <div>
-            <p className="text-sm font-semibold text-[#172033]">
+            <p className="text-[13px] font-semibold text-[#172033]">
               {conversation.data
                 ? conversationTitle(conversation.data, user.data?.id)
                 : "Conversation"}
             </p>
-            <p className="text-xs text-[#64748B]">
+            <p className="text-[12px] text-[#64748B]">
               {conversation.data?.description ||
                 (conversation.data?.kind === "DIRECT"
                   ? "Direct message"
@@ -465,7 +466,7 @@ function MessageList({
   }
 
   return (
-    <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
+    <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-3 py-3">
       {messages.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           No messages yet. Start the conversation.
@@ -489,13 +490,12 @@ function MessageList({
 
 function MessageRow({
   message,
-  mine,
   conversationId,
   canWrite,
   parent,
 }: {
   message: ChatMessage;
-  mine: boolean;
+  mine?: boolean;
   conversationId: string;
   canWrite: boolean;
   parent?: ChatMessage;
@@ -505,23 +505,23 @@ function MessageRow({
   const react = useReactToMessage();
 
   return (
-    <div className={cn("group flex gap-3", mine && "flex-row-reverse")}>
-      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-[11px] font-semibold text-primary">
+    <div className={cn("group flex gap-2.5 rounded-md px-1 py-1.5 hover:bg-[#F8FAFC]")}>
+      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#EEF2FF] text-[10px] font-semibold text-primary">
         {initials(message.author.name)}
       </span>
-      <div className={cn("min-w-0 max-w-[78%]", mine && "items-end")}>
-        <div className="flex items-center gap-2">
-          <p className="text-sm font-medium text-[#172033]">{message.author.name}</p>
-          <p className="text-xs text-[#94A3B8]">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline gap-2">
+          <p className="text-[13px] font-medium text-[#172033]">{message.author.name}</p>
+          <p className="text-[11px] text-[#94A3B8]">
             {formatRelativeTime(message.createdAt)}
           </p>
         </div>
         {parent ? (
-          <p className="mt-1 truncate rounded-md bg-slate-50 px-2 py-1 text-xs text-[#64748B]">
-            Replying to {parent.author.name}: {parent.body}
+          <p className="mt-1 truncate border-l-2 border-[#E5E7EB] pl-2 text-[12px] text-[#64748B]">
+            {parent.author.name}: {parent.body}
           </p>
         ) : null}
-        <div className="relative mt-1 rounded-2xl border border-[#E5E7EB] bg-white px-3 py-2 text-sm leading-6 text-[#172033]">
+        <div className="relative mt-0.5 text-[13px] leading-5 text-[#172033]">
           <MentionText body={message.body} />
           {canWrite ? (
             <button
@@ -815,7 +815,7 @@ function ConversationDetails({
   }
   const other = otherMember(conversation, userId);
   return (
-    <aside className="hidden w-[280px] shrink-0 overflow-y-auto border-l border-[#E5E7EB] bg-[#FCFCFD] p-4 lg:block">
+    <aside className="hidden w-[260px] shrink-0 overflow-y-auto border-l border-[#E5E7EB] bg-white p-4 lg:block">
       <p className="text-xs font-medium uppercase tracking-wide text-[#64748B]">
         Details
       </p>

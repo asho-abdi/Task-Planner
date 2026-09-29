@@ -5,7 +5,7 @@ export function Table({ className, ...props }: ComponentProps<"table">) {
   return (
     <div className="overflow-x-auto">
       <table
-        className={cn("w-full min-w-[640px] text-left text-sm", className)}
+        className={cn("w-full min-w-[640px] text-left text-[14px] font-medium", className)}
         {...props}
       />
     </div>
@@ -37,7 +37,7 @@ export function TableRow({ className, ...props }: ComponentProps<"tr">) {
 export function TableHead({ className, ...props }: ComponentProps<"th">) {
   return (
     <th
-      className={cn("px-4 py-3 text-xs font-medium uppercase tracking-wide", className)}
+      className={cn("px-4 py-3 text-[12px] font-semibold uppercase tracking-wide", className)}
       {...props}
     />
   );

@@ -4,14 +4,13 @@ import Link from "next/link";
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
-import { AuthShowcase } from "@/components/auth/auth-layout";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  AuthBrandLink,
+  AuthRocketPanel,
+  authLineField,
+} from "@/components/auth/auth-layout";
 import { useLogin } from "@/features/auth/hooks";
 import { cn } from "@/lib/utils";
-
-const fieldClass =
-  "h-11 rounded-none border-0 border-b border-[#d5dbe3] bg-transparent px-0 shadow-none focus-visible:border-[#2b6def] focus-visible:ring-0";
 
 export default function LoginPage() {
   return (
@@ -33,84 +32,99 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <AuthShowcase>
-      <h1 className="text-[40px] font-bold leading-none tracking-tight text-[#111827]">
-        Login
-      </h1>
-      <p className="mt-3 max-w-[260px] text-sm leading-6 text-[#9aa3b2]">
-        Welcome back. Sign in to continue to your workspace.
-      </p>
-      <form
-        className="mt-10 space-y-7"
-        onSubmit={(event) => {
-          event.preventDefault();
-          login.mutate({ email, password });
-        }}
-      >
-        <div className="space-y-2">
-          <Label htmlFor="email" className="text-[13px] font-medium text-[#374151]">
-            Email
-          </Label>
-          <Input
-            id="email"
-            type="email"
-            autoComplete="email"
-            placeholder="you@company.com"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-            className={fieldClass}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label
-            htmlFor="password"
-            className="text-[13px] font-medium text-[#374151]"
-          >
-            Password
-          </Label>
-          <div className="relative">
-            <Input
-              id="password"
-              type={showPassword ? "text" : "password"}
-              autoComplete="current-password"
-              placeholder="Please enter your password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-              className={cn(fieldClass, "pr-10")}
-            />
-            <button
-              type="button"
-              className="absolute right-0 top-1/2 -translate-y-1/2 text-[#9aa3b2] hover:text-[#4b5563]"
-              onClick={() => setShowPassword((open) => !open)}
-              aria-label={showPassword ? "Hide password" : "Show password"}
+    <div className="min-h-full bg-white text-[#2D3766]">
+      <div className="grid min-h-svh lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+        <section className="flex flex-col px-8 py-8 sm:px-14 sm:py-10 lg:px-20 lg:py-12">
+          <AuthBrandLink />
+
+          <div className="mx-auto flex w-full max-w-[460px] flex-1 flex-col justify-center py-10">
+            <h1 className="font-heading text-[32px] font-extrabold leading-[1.15] tracking-[-0.03em] text-[#374151] sm:text-[34px]">
+              Sign In
+            </h1>
+            <p className="mt-2 text-[15px] font-normal leading-[1.5] text-[#9CA3AF]">
+              Welcome back. Continue to your workspace.
+            </p>
+
+            <form
+              className="mt-10 space-y-8"
+              onSubmit={(event) => {
+                event.preventDefault();
+                login.mutate({ email, password });
+              }}
             >
-              {showPassword ? (
-                <EyeOff className="h-4 w-4" />
-              ) : (
-                <Eye className="h-4 w-4" />
-              )}
-            </button>
+              <label className="block">
+                <span className="mb-2 block text-[13px] text-[#9CA3AF]">
+                  Email
+                </span>
+                <input
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@company.com"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                  className={authLineField}
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-[13px] text-[#9CA3AF]">
+                  Password
+                </span>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    required
+                    className={cn(authLineField, "pr-9")}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-0 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#374151]"
+                    onClick={() => setShowPassword((open) => !open)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </label>
+
+              {login.error ? (
+                <p className="text-sm text-destructive">{login.error.message}</p>
+              ) : null}
+
+              <button
+                type="submit"
+                disabled={login.isPending}
+                className="h-12 min-w-[168px] rounded-full bg-[#2D3766] px-10 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(45,55,102,0.28)] transition-colors hover:bg-[#243058] disabled:opacity-60"
+              >
+                {login.isPending ? "Signing in…" : "Sign in"}
+              </button>
+            </form>
+
+            <p className="mt-8 text-sm text-[#9CA3AF]">
+              No account?{" "}
+              <Link
+                className="font-medium text-[#2D3766] hover:underline"
+                href={registerHref}
+              >
+                Register
+              </Link>
+            </p>
           </div>
-        </div>
-        {login.error ? (
-          <p className="text-sm text-destructive">{login.error.message}</p>
-        ) : null}
-        <button
-          type="submit"
-          disabled={login.isPending}
-          className="h-11 w-full rounded-md bg-[#2b6def] text-sm font-semibold uppercase tracking-[0.14em] text-white shadow-[0_10px_22px_rgba(43,109,239,0.35)] transition-colors hover:bg-[#2560d6] disabled:opacity-60"
-        >
-          {login.isPending ? "Signing in..." : "Login"}
-        </button>
-      </form>
-      <p className="mt-8 text-sm text-[#9aa3b2]">
-        No account?{" "}
-        <Link className="font-medium text-[#2b6def] hover:underline" href={registerHref}>
-          Create one
-        </Link>
-      </p>
-    </AuthShowcase>
+        </section>
+
+        <aside className="relative hidden overflow-hidden bg-[#2D3766] lg:block">
+          <AuthRocketPanel />
+        </aside>
+      </div>
+    </div>
   );
 }

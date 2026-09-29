@@ -1,302 +1,198 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import {
   AlertTriangle,
+  ArrowDownRight,
+  ArrowUpRight,
   CalendarDays,
   CheckCircle2,
   CheckSquare,
-  ChevronDown,
-  Clock,
-  Plus,
-  Search,
-  Video,
 } from "lucide-react";
-import { MemberAvatarGroup, PersonAvatar } from "@/components/member-avatar-group";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Meter } from "@/features/insights/ui";
-import { useDashboard, useMyDay } from "@/features/insights/hooks";
+import { useDashboard, useMyDay, useReports } from "@/features/insights/hooks";
 import { useCurrentUser } from "@/features/auth/hooks";
-import { useMutateTask, useStartTask } from "@/features/tasks/hooks";
-import { useProjects } from "@/features/projects/hooks";
-import {
-  useCurrentWorkspace,
-  useWorkspaceMembers,
-} from "@/features/workspaces/hooks";
-import { activityHref } from "@/features/chat/types";
-import {
-  cn,
-  formatDate,
-  formatRelativeTime,
-  formatTime,
-  fromDateInputValue,
-  localDateYmd,
-  nativeSelectClass,
-  toDateInputValue,
-} from "@/lib/utils";
+import { useStartTask } from "@/features/tasks/hooks";
+import { useCurrentWorkspace } from "@/features/workspaces/hooks";
+import { cn, formatDate, localDateYmd } from "@/lib/utils";
 import { useUiStore } from "@/store/ui-store";
 import { useWorkspaceStore } from "@/store/workspace-store";
-import type {
-  DashboardMeeting,
-  DashboardTask,
-  InsightTask,
-} from "@/features/insights/types";
+import type { DashboardTask, InsightTask } from "@/features/insights/types";
 
-type WorkTab = "today" | "upcoming" | "completed";
+const STATUS_TONES: Record<string, string> = {
+  COMPLETED: "#16A34A",
+  IN_PROGRESS: "#635BFF",
+  OVERDUE: "#EF4444",
+  TODO: "#94A3B8",
+  IN_REVIEW: "#F59E0B",
+  RETURNED: "#EF4444",
+};
 
 function firstNameOf(name?: string | null) {
   return name?.split(" ")[0] ?? "there";
 }
 
-function dueLabel(value: string | null) {
-  if (!value) return "No due date";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "No due date";
-  if (date.getUTCHours() === 0 && date.getUTCMinutes() === 0) {
-    return formatDate(value);
-  }
-  return `${formatDate(value)} · ${formatTime(value)}`;
+function shiftYmd(value: string, days: number) {
+  const date = new Date(`${value}T00:00:00`);
+  date.setDate(date.getDate() + days);
+  return localDateYmd(date);
 }
 
-function meetingPlace(meeting: DashboardMeeting) {
-  if (meeting.mode === "ONLINE" || meeting.meetingLink) return "Online";
-  return "Offline";
-}
-
-function priorityDot(priority?: string) {
-  if (priority === "URGENT" || priority === "CRITICAL") return "bg-[#EF4444]";
-  if (priority === "HIGH") return "bg-[#F59E0B]";
-  if (priority === "MEDIUM") return "bg-primary";
-  return "bg-[#94A3B8]";
+function weekday(value: string) {
+  return new Date(`${value}T00:00:00`).toLocaleDateString(undefined, {
+    weekday: "short",
+  });
 }
 
 function canStartTask(status: string) {
   return status === "TODO" || status === "RETURNED" || status === "OVERDUE";
 }
 
-function resourceLabel(entityType: string | null) {
-  if (entityType === "task") return "Task";
-  if (entityType === "project") return "Project";
-  if (entityType === "meeting") return "Meeting";
-  if (entityType === "file") return "File";
-  if (entityType === "conversation") return "Chat";
-  return entityType ?? "Workspace";
+function changeFromTrend(
+  values: number[],
+): { percent: number; up: boolean } | null {
+  if (values.length < 4) return null;
+  const mid = Math.floor(values.length / 2);
+  const previous = values.slice(0, mid).reduce((sum, n) => sum + n, 0);
+  const current = values.slice(mid).reduce((sum, n) => sum + n, 0);
+  if (previous === 0 && current === 0) return null;
+  if (previous === 0) return { percent: 100, up: true };
+  const percent = Math.round(((current - previous) / previous) * 100);
+  if (percent === 0) return null;
+  return { percent: Math.abs(percent), up: percent > 0 };
 }
 
 export function DashboardHome() {
-  const router = useRouter();
   const workspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
   const user = useCurrentUser();
   const workspace = useCurrentWorkspace();
   const dashboard = useDashboard(workspaceId);
   const myDay = useMyDay(workspaceId, localDateYmd());
-  const projects = useProjects(workspaceId);
-  const members = useWorkspaceMembers(workspaceId);
+  const [range, setRange] = useState<"7" | "14">("7");
+  const to = localDateYmd();
+  const from = shiftYmd(to, 1 - Number(range));
+  const reports = useReports(workspaceId, { from, to });
   const openTaskCreate = useUiStore((state) => state.openTaskCreate);
   const openMeetingCreate = useUiStore((state) => state.openMeetingCreate);
-  const [query, setQuery] = useState("");
-  const [workTab, setWorkTab] = useState<WorkTab>("today");
-  const [activityOpen, setActivityOpen] = useState(false);
   const firstName = firstNameOf(user.data?.name);
   const canWrite = Boolean(workspace && workspace.role !== "VIEWER");
   const data = dashboard.data;
-
-  const todayTasks = useMemo(
-    () => myDay.data?.todayTasks.items ?? data?.myDay?.items ?? [],
-    [myDay.data?.todayTasks.items, data?.myDay?.items],
-  );
-  const upcomingTasks = myDay.data?.upcomingDeadlines?.items ?? [];
-  const completedTasks = myDay.data?.completedTasks?.items ?? [];
-  const workLists: Record<WorkTab, InsightTask[] | DashboardTask[]> = {
-    today: todayTasks,
-    upcoming: upcomingTasks,
-    completed: completedTasks,
-  };
-
-  const searchHits = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (q.length < 2) return { tasks: [], projects: [], people: [] };
-    return {
-      tasks: (data?.myDay?.items ?? todayTasks)
-        .filter((item) => item.title.toLowerCase().includes(q))
-        .slice(0, 4),
-      projects: (projects.data ?? [])
-        .filter((item) => item.name.toLowerCase().includes(q))
-        .slice(0, 4),
-      people: (members.data ?? [])
-        .filter((item) => item.user.name.toLowerCase().includes(q))
-        .slice(0, 4),
-    };
-  }, [query, data?.myDay?.items, todayTasks, projects.data, members.data]);
-
-  function submitSearch(event: FormEvent) {
-    event.preventDefault();
-    const q = query.trim();
-    router.push(q ? `/app/tasks?q=${encodeURIComponent(q)}` : "/app/tasks");
-  }
+  const todayTasks = myDay.data?.todayTasks.items ?? data?.myDay?.items ?? [];
 
   const myTasks = data?.totals.myTasks ?? data?.totals.total ?? 0;
-  const meetingsCount =
+  const completed = data?.totals.completed ?? 0;
+  const overdue = data?.totals.overdue ?? 0;
+  const meetings =
     data?.totals.upcomingMeetings ?? data?.upcomingMeetings.total ?? 0;
-  const activeProjects = data?.activeProjects ?? data?.projectProgress ?? [];
-  const meetings = (data?.upcomingMeetings.items ?? []).slice(0, 5);
-  const deadlines = (data?.upcomingDeadlines ?? []).slice(0, 5);
-  const activity = (data?.recentActivity ?? []).slice(0, 6);
+  const createdTrend = reports.data?.trends.map((item) => item.created) ?? [];
+  const completedTrend =
+    reports.data?.trends.map((item) => item.completed) ?? [];
+  const weekCreated = createdTrend.reduce((sum, n) => sum + n, 0);
+  const weekCompleted = completedTrend.reduce((sum, n) => sum + n, 0);
 
-  const activityPanel = (
-    <ActivityPanel
-      loading={dashboard.isLoading}
-      error={dashboard.isError ? dashboard.error.message : null}
-      meetings={meetings}
-      deadlines={deadlines}
-      activity={activity}
-      currentUserId={user.data?.id}
-    />
-  );
+  const donut = useMemo(() => {
+    const byStatus = reports.data?.completion.byStatus ?? {};
+    const rows = Object.entries(byStatus)
+      .filter(([, count]) => count > 0)
+      .map(([status, count]) => ({
+        label: status.replaceAll("_", " ").toLowerCase(),
+        count,
+        color: STATUS_TONES[status] ?? "#94A3B8",
+      }));
+    if (rows.length) return rows;
+    return [
+      { label: "open", count: myTasks, color: "#635BFF" },
+      { label: "completed", count: completed, color: "#16A34A" },
+      { label: "overdue", count: overdue, color: "#EF4444" },
+    ].filter((item) => item.count > 0);
+  }, [reports.data?.completion.byStatus, myTasks, completed, overdue]);
 
   return (
-    <div className="-mx-4 -my-6 flex min-h-[calc(100svh-5.5rem)] flex-col xl:-mx-8 xl:-my-8 xl:flex-row">
-      <div className="min-w-0 flex-1 space-y-5 px-4 py-6 sm:px-8 sm:py-8">
-        <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <h1 className="text-[26px] font-semibold tracking-tight text-[#172033]">
-              Dashboard
-            </h1>
-            <p className="mt-1 text-sm text-[#64748B]">
-              Welcome back, {firstName}. Here&apos;s what needs your attention.
-            </p>
-          </div>
-          <form
-            className="relative w-full min-w-0 lg:max-w-sm"
-            onSubmit={submitSearch}
+    <div className="space-y-6">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="font-heading text-[26px] font-extrabold leading-[1.2] tracking-[-0.03em] text-[#172033] sm:text-[30px]">
+            Dashboard
+          </h1>
+          <label className="sr-only" htmlFor="dashboard-range">
+            Date range
+          </label>
+          <select
+            id="dashboard-range"
+            value={range}
+            onChange={(event) => setRange(event.target.value as "7" | "14")}
+            className="h-9 rounded-xl border border-[#E5E7EB] bg-white px-3 text-[14px] font-medium text-[#172033] shadow-[var(--shadow-soft)]"
           >
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
-            <Input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search tasks, projects, people..."
-              className="h-10 rounded-xl border-[#E5E7EB] bg-white pl-9"
-              aria-label="Search tasks, projects, people"
-            />
-            {query.trim().length >= 2 &&
-            (searchHits.tasks.length ||
-              searchHits.projects.length ||
-              searchHits.people.length) ? (
-              <div className="absolute z-20 mt-1 w-full rounded-xl border border-[#E5E7EB] bg-white p-2 shadow-[var(--shadow-soft)]">
-                {searchHits.tasks.map((task) => (
-                  <Link
-                    key={task.id}
-                    href={`/app/tasks/${task.id}`}
-                    className="block rounded-lg px-3 py-2 text-sm hover:bg-[#F8FAFC]"
-                  >
-                    {task.title}
-                    <span className="ml-2 text-xs text-[#64748B]">Task</span>
-                  </Link>
-                ))}
-                {searchHits.projects.map((project) => (
-                  <Link
-                    key={project.id}
-                    href={`/app/projects/${project.id}`}
-                    className="block rounded-lg px-3 py-2 text-sm hover:bg-[#F8FAFC]"
-                  >
-                    {project.name}
-                    <span className="ml-2 text-xs text-[#64748B]">Project</span>
-                  </Link>
-                ))}
-                {searchHits.people.map((member) => (
-                  <Link
-                    key={member.userId}
-                    href="/app/teams"
-                    className="block rounded-lg px-3 py-2 text-sm hover:bg-[#F8FAFC]"
-                  >
-                    {member.user.name}
-                    <span className="ml-2 text-xs text-[#64748B]">Person</span>
-                  </Link>
-                ))}
-                <button
-                  type="submit"
-                  className="mt-1 w-full rounded-lg px-3 py-2 text-left text-sm text-primary hover:bg-[#EEF2FF]"
-                >
-                  Search tasks for “{query.trim()}”
-                </button>
-              </div>
-            ) : null}
-          </form>
-        </header>
-
-        <section className="flex flex-col gap-4 rounded-2xl border border-[#E5E7EB] bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <p className="text-lg font-semibold tracking-tight text-[#172033]">
-              Welcome back, {firstName} 👋
-            </p>
-            <p className="mt-0.5 text-sm text-[#64748B]">
-              Here&apos;s what&apos;s happening with your work today.
-            </p>
+            <option value="7">This week</option>
+            <option value="14">Last 14 days</option>
+          </select>
+        </div>
+        {canWrite ? (
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={() => openTaskCreate()}>
+              Create Task
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => openMeetingCreate()}
+            >
+              Schedule Meeting
+            </Button>
           </div>
-          {canWrite ? (
-            <div className="flex flex-wrap gap-2">
-              <Button size="sm" onClick={() => openTaskCreate()}>
-                <Plus className="h-4 w-4" />
-                Create Task
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => openMeetingCreate()}
-              >
-                <CalendarDays className="h-4 w-4" />
-                Schedule Meeting
-              </Button>
-            </div>
-          ) : null}
-        </section>
+        ) : null}
+      </header>
+      <p className="text-sm text-[#64748B]">
+        Welcome back, {firstName}.
+      </p>
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {dashboard.isError ? (
+        <p className="text-sm text-destructive">{dashboard.error.message}</p>
+      ) : null}
+
+      <div className="grid gap-4 xl:grid-cols-12">
+        <div className="grid gap-4 sm:grid-cols-2 xl:col-span-5">
           {dashboard.isLoading ? (
             <>
-              <Skeleton className="h-24" />
-              <Skeleton className="h-24" />
-              <Skeleton className="h-24" />
-              <Skeleton className="h-24" />
+              <Skeleton className="h-[118px] rounded-2xl" />
+              <Skeleton className="h-[118px] rounded-2xl" />
+              <Skeleton className="h-[118px] rounded-2xl" />
+              <Skeleton className="h-[118px] rounded-2xl" />
             </>
-          ) : dashboard.isError ? (
-            <p className="col-span-full text-sm text-destructive">
-              {dashboard.error.message}
-            </p>
           ) : (
             <>
-              <SummaryCard
+              <StatCard
                 href="/app/tasks"
                 label="My Tasks"
                 value={myTasks}
                 hint="Open work assigned to you"
                 icon={CheckSquare}
+                change={changeFromTrend(createdTrend)}
               />
-              <SummaryCard
+              <StatCard
                 href="/app/tasks"
                 label="Completed"
-                value={data?.totals.completed ?? 0}
+                value={completed}
                 hint="Finished in this workspace"
                 icon={CheckCircle2}
                 tone="success"
+                change={changeFromTrend(completedTrend)}
               />
-              <SummaryCard
+              <StatCard
                 href="/app/my-day"
                 label="Overdue"
-                value={data?.totals.overdue ?? 0}
+                value={overdue}
                 hint="Needs attention"
                 icon={AlertTriangle}
                 tone="danger"
               />
-              <SummaryCard
+              <StatCard
                 href="/app/meetings"
                 label="Upcoming Meetings"
-                value={meetingsCount}
+                value={meetings}
                 hint="Scheduled this week"
                 icon={CalendarDays}
               />
@@ -304,215 +200,137 @@ export function DashboardHome() {
           )}
         </div>
 
-        <section className="rounded-2xl border border-[#E5E7EB] bg-white">
-          <div className="flex flex-col gap-3 border-b border-[#E5E7EB] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-[var(--shadow-soft)] xl:col-span-7">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="text-base font-semibold text-[#172033]">My Work</h2>
-              <p className="text-sm text-[#64748B]">
-                Today, upcoming, and recently finished tasks
+              <h2 className="text-[15px] font-bold text-[#172033]">Activity</h2>
+              <p className="text-xs text-[#64748B]">
+                Tasks created and completed
               </p>
             </div>
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/app/my-day">Open My Day</Link>
-            </Button>
-          </div>
-          <div className="flex gap-1 overflow-x-auto border-b border-[#E5E7EB] px-3 py-2">
-            {(
-              [
-                ["today", "Today's Tasks", todayTasks.length],
-                ["upcoming", "Upcoming Tasks", upcomingTasks.length],
-                ["completed", "Recently Completed", completedTasks.length],
-              ] as const
-            ).map(([id, label, count]) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setWorkTab(id)}
-                className={cn(
-                  "shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                  workTab === id
-                    ? "bg-[#EEF2FF] text-primary"
-                    : "text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#172033]",
-                )}
-              >
-                {label}
-                <span className="ml-1.5 text-xs text-[#94A3B8]">{count}</span>
-              </button>
-            ))}
-          </div>
-          {dashboard.isLoading && myDay.isLoading ? (
-            <div className="space-y-3 p-5">
-              <Skeleton className="h-14" />
-              <Skeleton className="h-14" />
-              <Skeleton className="h-14" />
+            <div className="flex gap-5 text-sm">
+              <Legend swatch="#635BFF" label={`${weekCreated} created`} />
+              <Legend swatch="#16A34A" label={`${weekCompleted} completed`} />
             </div>
-          ) : workLists[workTab].length === 0 ? (
-            <p className="px-5 py-8 text-sm text-[#64748B]">
-              {workTab === "today"
-                ? "No tasks assigned yet"
-                : workTab === "upcoming"
-                  ? "No upcoming tasks"
-                  : "No recently completed work"}
+          </div>
+          {reports.isLoading ? (
+            <Skeleton className="mt-6 h-52" />
+          ) : reports.isError ? (
+            <p className="mt-8 text-sm text-destructive">
+              {reports.error.message}
+            </p>
+          ) : !(reports.data?.trends.length ?? 0) ? (
+            <p className="mt-16 text-center text-sm text-[#64748B]">
+              No activity in this range yet.
             </p>
           ) : (
-            <div className="divide-y divide-[#E5E7EB]">
-              {workLists[workTab].map((task) => (
-                <WorkRow
-                  key={task.id}
-                  task={task}
-                  completed={workTab === "completed"}
-                  canWrite={canWrite}
-                />
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section>
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <h2 className="text-base font-semibold text-[#172033]">
-              Active Projects
-            </h2>
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/app/projects">View all</Link>
-            </Button>
-          </div>
-          {dashboard.isLoading ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Skeleton className="h-28" />
-              <Skeleton className="h-28" />
-            </div>
-          ) : activeProjects.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-[#E5E7EB] bg-white px-5 py-8 text-sm text-[#64748B]">
-              No active projects yet.
-            </p>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {activeProjects.map((project) => (
-                <Link
-                  key={project.projectId}
-                  href={`/app/projects/${project.projectId}`}
-                  className="rounded-2xl border border-[#E5E7EB] bg-white p-4 transition-colors hover:border-primary/40"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="truncate font-medium text-[#172033]">
-                      {project.name}
-                    </p>
-                    {project.status ? (
-                      <StatusBadge value={project.status} />
-                    ) : null}
-                  </div>
-                  <div className="mt-3 flex items-center justify-between text-xs text-[#64748B]">
-                    <span>Progress</span>
-                    <span className="font-medium text-[#172033]">
-                      {project.percent}%
-                    </span>
-                  </div>
-                  <Meter className="mt-1.5" value={project.percent} />
-                  <div className="mt-3 flex items-center justify-between gap-3">
-                    <MemberAvatarGroup people={project.members ?? []} />
-                    <span className="text-xs text-[#64748B]">
-                      {project.dueDate
-                        ? `Due ${formatDate(project.dueDate)}`
-                        : "No due date"}
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {data?.teamWorkload.length ? (
-          <section className="rounded-2xl border border-[#E5E7EB] bg-white px-5 py-4">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 className="text-base font-semibold text-[#172033]">
-                Team workload
-              </h2>
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/app/workload">View Workload</Link>
-              </Button>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {data.teamWorkload.slice(0, 4).map((person) => {
-                const percent = Math.min(
-                  100,
-                  Math.round(person.utilization * 100),
-                );
-                return (
-                  <div key={person.userId}>
-                    <div className="mb-1.5 flex items-center justify-between gap-3 text-sm">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <PersonAvatar name={person.name} size="sm" />
-                        <span className="truncate font-medium text-[#172033]">
-                          {person.name}
-                        </span>
-                      </div>
-                      <span
-                        className={cn(
-                          "shrink-0 text-xs font-medium",
-                          person.overloaded
-                            ? "text-[#EF4444]"
-                            : "text-[#64748B]",
-                        )}
-                      >
-                        {percent}%
-                      </span>
-                    </div>
-                    <Meter value={percent} danger={person.overloaded} />
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        ) : null}
-
-        <section className="xl:hidden">
-          <button
-            type="button"
-            className="flex w-full items-center justify-between rounded-2xl border border-[#E5E7EB] bg-white px-5 py-4 text-left"
-            onClick={() => setActivityOpen((open) => !open)}
-            aria-expanded={activityOpen}
-          >
-            <div>
-              <p className="text-base font-semibold text-[#172033]">
-                My Activity
-              </p>
-              <p className="text-sm text-[#64748B]">
-                Meetings, deadlines, and recent updates
-              </p>
-            </div>
-            <ChevronDown
-              className={cn(
-                "h-4 w-4 text-[#64748B] transition-transform",
-                activityOpen && "rotate-180",
+            <TrendChart
+              labels={(reports.data?.trends ?? []).map((item) =>
+                weekday(item.day),
               )}
+              created={createdTrend}
+              completed={completedTrend}
             />
-          </button>
-          {activityOpen ? (
-            <div className="mt-3 overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white">
-              {activityPanel}
-            </div>
-          ) : null}
+          )}
         </section>
       </div>
 
-      <aside className="hidden w-[320px] shrink-0 border-l border-[#E5E7EB] bg-white xl:flex xl:flex-col">
-        <div className="sticky top-0 max-h-[calc(100svh-4.5rem)] overflow-y-auto">
-          {activityPanel}
-        </div>
-      </aside>
+      <div className="grid gap-4 xl:grid-cols-12">
+        <section className="rounded-2xl border border-[#E5E7EB] bg-white shadow-[var(--shadow-soft)] xl:col-span-8">
+          <div className="flex items-center justify-between gap-3 border-b border-[#E5E7EB] px-5 py-4">
+            <h2 className="text-[15px] font-bold text-[#172033]">
+              Today&apos;s tasks
+            </h2>
+            <Button asChild size="sm" variant="outline">
+              <Link href="/app/my-day">View all</Link>
+            </Button>
+          </div>
+          {dashboard.isLoading && myDay.isLoading ? (
+            <div className="space-y-3 p-5">
+              <Skeleton className="h-10" />
+              <Skeleton className="h-10" />
+              <Skeleton className="h-10" />
+            </div>
+          ) : todayTasks.length === 0 ? (
+            <p className="px-5 py-10 text-sm text-[#64748B]">
+              No tasks assigned yet
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] text-left text-[14px] font-medium">
+                <thead className="text-[12px] font-semibold uppercase tracking-wide text-[#94A3B8]">
+                  <tr className="border-b border-[#E5E7EB]">
+                    <th className="px-5 py-3 font-medium">Task</th>
+                    <th className="px-3 py-3 font-medium">Project</th>
+                    <th className="px-3 py-3 font-medium">Priority</th>
+                    <th className="px-3 py-3 font-medium">Due</th>
+                    <th className="px-5 py-3 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {todayTasks.slice(0, 8).map((task) => (
+                    <TaskRow
+                      key={task.id}
+                      task={task}
+                      canWrite={canWrite}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-[var(--shadow-soft)] xl:col-span-4">
+          <h2 className="text-[15px] font-bold text-[#172033]">Work mix</h2>
+          <p className="text-xs text-[#64748B]">By status in this range</p>
+          {reports.isLoading && dashboard.isLoading ? (
+            <Skeleton className="mx-auto mt-8 h-44 w-44 rounded-full" />
+          ) : donut.length === 0 ? (
+            <p className="mt-16 text-center text-sm text-[#64748B]">
+              No work to chart yet.
+            </p>
+          ) : (
+            <>
+              <Donut
+                total={donut.reduce((sum, item) => sum + item.count, 0)}
+                slices={donut}
+              />
+              <ul className="mt-4 space-y-2">
+                {donut.map((item) => (
+                  <li
+                    key={item.label}
+                    className="flex items-center justify-between text-sm"
+                  >
+                    <span className="flex items-center gap-2 capitalize text-[#64748B]">
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{ background: item.color }}
+                      />
+                      {item.label}
+                    </span>
+                    <span className="font-medium text-[#172033]">
+                      {item.count}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </section>
+      </div>
     </div>
   );
 }
 
-function SummaryCard({
+function StatCard({
   href,
   label,
   value,
   hint,
   icon: Icon,
   tone,
+  change,
 }: {
   href: string;
   label: string;
@@ -520,17 +338,18 @@ function SummaryCard({
   hint: string;
   icon: typeof CheckSquare;
   tone?: "success" | "danger";
+  change?: { percent: number; up: boolean } | null;
 }) {
   return (
     <Link
       href={href}
-      className="rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-[var(--shadow-soft)] transition-colors hover:border-primary/35"
+      className="rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-[var(--shadow-soft)] transition-colors hover:border-primary/30"
     >
       <div className="flex items-start justify-between gap-3">
         <p className="text-sm text-[#64748B]">{label}</p>
         <span
           className={cn(
-            "flex h-8 w-8 items-center justify-center rounded-lg",
+            "flex h-8 w-8 items-center justify-center rounded-xl",
             tone === "success" && "bg-emerald-50 text-[#16A34A]",
             tone === "danger" && "bg-red-50 text-[#EF4444]",
             !tone && "bg-[#EEF2FF] text-primary",
@@ -541,341 +360,208 @@ function SummaryCard({
       </div>
       <p
         className={cn(
-          "mt-3 text-[26px] font-semibold tracking-tight text-[#172033]",
-          tone === "success" && "text-[#16A34A]",
+          "mt-3 text-[28px] font-semibold tracking-tight text-[#172033]",
           tone === "danger" && value > 0 && "text-[#EF4444]",
         )}
       >
-        {value}
+        {value.toLocaleString()}
       </p>
-      <p className="mt-1 text-xs text-[#64748B]">{hint}</p>
+      <div className="mt-1 flex items-center gap-2 text-xs">
+        {change ? (
+          <span
+            className={cn(
+              "inline-flex items-center font-medium",
+              change.up ? "text-[#16A34A]" : "text-[#EF4444]",
+            )}
+          >
+            {change.up ? (
+              <ArrowUpRight className="h-3.5 w-3.5" />
+            ) : (
+              <ArrowDownRight className="h-3.5 w-3.5" />
+            )}
+            {change.percent}%
+          </span>
+        ) : null}
+        <span className="text-[#64748B]">{hint}</span>
+      </div>
     </Link>
   );
 }
 
-function WorkRow({
+function Legend({ swatch, label }: { swatch: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-[#64748B]">
+      <span
+        className="h-2 w-2 rounded-full"
+        style={{ background: swatch }}
+      />
+      {label}
+    </span>
+  );
+}
+
+function TaskRow({
   task,
-  completed,
   canWrite,
 }: {
   task: InsightTask | DashboardTask;
-  completed: boolean;
   canWrite: boolean;
 }) {
   const start = useStartTask();
-  const mutate = useMutateTask();
-  const canStart = canWrite && !completed && canStartTask(task.status);
-  const assignee =
-    ("assignee" in task ? task.assignee : null) ?? task.assignees?.[0] ?? null;
+  const canStart = canWrite && canStartTask(task.status);
 
   return (
-    <div className="flex flex-col gap-3 px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex min-w-0 items-start gap-3">
-        <button
-          type="button"
-          aria-label={
-            completed
-              ? "Completed"
-              : canStart
-                ? "Start work"
-                : "Task in progress"
-          }
-          disabled={!canStart || start.isPending}
-          onClick={() => {
-            if (canStart) void start.mutateAsync(task.id);
-          }}
-          className={cn(
-            "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border",
-            completed
-              ? "border-[#16A34A] bg-[#16A34A] text-white"
-              : canStart
+    <tr className="border-b border-[#E5E7EB] last:border-0">
+      <td className="px-5 py-3.5">
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            aria-label={canStart ? "Start work" : "Task status"}
+            disabled={!canStart || start.isPending}
+            onClick={() => {
+              if (canStart) void start.mutateAsync(task.id);
+            }}
+            className={cn(
+              "h-4 w-4 shrink-0 rounded border",
+              canStart
                 ? "border-[#CBD5E1] bg-white hover:border-primary"
                 : "border-primary bg-primary/10",
-          )}
-        >
-          {completed ? (
-            <span className="h-2 w-2 rounded-[1px] bg-white" />
-          ) : null}
-        </button>
-        <div className="min-w-0">
+            )}
+          />
           <Link
             href={`/app/tasks/${task.id}`}
-            className={cn(
-              "font-medium hover:text-primary",
-              completed
-                ? "text-[#64748B] line-through"
-                : "text-[#172033]",
-            )}
+            className="font-medium text-[#172033] hover:text-primary"
           >
             {task.title}
           </Link>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[#64748B]">
-            <span className="inline-flex items-center gap-1">
-              <span
-                className={cn(
-                  "h-1.5 w-1.5 rounded-full",
-                  priorityDot(task.priority),
-                )}
-              />
-              {task.priority.replaceAll("_", " ").toLowerCase()}
-            </span>
-            <span>{task.project?.name ?? "No project"}</span>
-            <span>{dueLabel(task.dueDate)}</span>
-            {assignee ? <span>{assignee.name}</span> : null}
-          </div>
         </div>
-      </div>
-      <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
-        {canStart ? (
-          <Button
-            size="sm"
-            onClick={() => void start.mutateAsync(task.id)}
-            disabled={start.isPending}
-          >
-            Start work
-          </Button>
-        ) : null}
-        <Button asChild size="sm" variant="ghost">
-          <Link href={`/app/tasks/${task.id}`}>Open</Link>
-        </Button>
-        {canWrite && !completed ? (
-          <label className="flex items-center gap-1.5 text-xs text-[#64748B]">
-            Reschedule
-            <input
-              type="date"
-              aria-label="Reschedule"
-              className={cn(nativeSelectClass, "h-8 w-[132px] text-xs")}
-              value={toDateInputValue(task.dueDate)}
-              onChange={(event) =>
-                void mutate.mutateAsync({
-                  taskId: task.id,
-                  input: {
-                    dueDate: fromDateInputValue(event.target.value) ?? null,
-                  },
-                })
-              }
-            />
-          </label>
-        ) : null}
-      </div>
-    </div>
+      </td>
+      <td className="px-3 py-3.5 text-[#64748B]">
+        {task.project?.name ?? "—"}
+      </td>
+      <td className="px-3 py-3.5">
+        <StatusBadge value={task.priority} />
+      </td>
+      <td className="px-3 py-3.5 text-[#64748B]">
+        {task.dueDate ? formatDate(task.dueDate) : "—"}
+      </td>
+      <td className="px-5 py-3.5">
+        <StatusBadge value={task.status} />
+      </td>
+    </tr>
   );
 }
 
-function ActivityPanel({
-  loading,
-  error,
-  meetings,
-  deadlines,
-  activity,
-  currentUserId,
+function TrendChart({
+  labels,
+  created,
+  completed,
 }: {
-  loading: boolean;
-  error: string | null;
-  meetings: DashboardMeeting[];
-  deadlines: NonNullable<
-    NonNullable<ReturnType<typeof useDashboard>["data"]>["upcomingDeadlines"]
-  >;
-  activity: NonNullable<
-    NonNullable<ReturnType<typeof useDashboard>["data"]>["recentActivity"]
-  >;
-  currentUserId?: string;
+  labels: string[];
+  created: number[];
+  completed: number[];
 }) {
+  const width = 640;
+  const height = 220;
+  const pad = { l: 28, r: 12, t: 16, b: 28 };
+  const max = Math.max(1, ...created, ...completed);
+  const innerW = width - pad.l - pad.r;
+  const innerH = height - pad.t - pad.b;
+  const x = (index: number) =>
+    pad.l + (labels.length <= 1 ? innerW / 2 : (index / (labels.length - 1)) * innerW);
+  const y = (value: number) => pad.t + innerH - (value / max) * innerH;
+  const path = (values: number[]) =>
+    values
+      .map((value, index) => `${index === 0 ? "M" : "L"} ${x(index)} ${y(value)}`)
+      .join(" ");
+
   return (
-    <div className="space-y-6 px-5 py-6">
-      <div>
-        <h2 className="text-base font-semibold text-[#172033]">My Activity</h2>
-        <p className="mt-0.5 text-xs text-[#64748B]">
-          Meetings, deadlines, and updates
+    <svg viewBox={`0 0 ${width} ${height}`} className="mt-4 h-52 w-full">
+      {[0.25, 0.5, 0.75, 1].map((tick) => (
+        <line
+          key={tick}
+          x1={pad.l}
+          x2={width - pad.r}
+          y1={y(max * tick)}
+          y2={y(max * tick)}
+          stroke="#E5E7EB"
+          strokeDasharray="4 6"
+        />
+      ))}
+      <path d={path(created)} fill="none" stroke="#635BFF" strokeWidth="2.5" strokeLinecap="round" />
+      <path d={path(completed)} fill="none" stroke="#16A34A" strokeWidth="2.5" strokeLinecap="round" />
+      {created.map((value, index) => (
+        <circle key={`c-${index}`} cx={x(index)} cy={y(value)} r="3" fill="#635BFF">
+          <title>{`${labels[index]} · ${value} created`}</title>
+        </circle>
+      ))}
+      {completed.map((value, index) => (
+        <circle key={`d-${index}`} cx={x(index)} cy={y(value)} r="3" fill="#16A34A">
+          <title>{`${labels[index]} · ${value} completed`}</title>
+        </circle>
+      ))}
+      {labels.map((label, index) => (
+        <text
+          key={label + index}
+          x={x(index)}
+          y={height - 8}
+          textAnchor="middle"
+          className="fill-[#94A3B8] text-[11px]"
+        >
+          {label}
+        </text>
+      ))}
+    </svg>
+  );
+}
+
+function Donut({
+  total,
+  slices,
+}: {
+  total: number;
+  slices: Array<{ label: string; count: number; color: string }>;
+}) {
+  const r = 54;
+  const c = 2 * Math.PI * r;
+  let offset = 0;
+  return (
+    <div className="relative mx-auto mt-6 h-44 w-44">
+      <svg viewBox="0 0 140 140" className="-rotate-90">
+        <circle
+          cx="70"
+          cy="70"
+          r={r}
+          fill="none"
+          stroke="#EEF2F6"
+          strokeWidth="16"
+        />
+        {slices.map((slice) => {
+          const len = total ? (slice.count / total) * c : 0;
+          const circle = (
+            <circle
+              key={slice.label}
+              cx="70"
+              cy="70"
+              r={r}
+              fill="none"
+              stroke={slice.color}
+              strokeWidth="16"
+              strokeDasharray={`${len} ${c - len}`}
+              strokeDashoffset={-offset}
+              strokeLinecap="round"
+            />
+          );
+          offset += len;
+          return circle;
+        })}
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <p className="text-xs text-[#64748B]">Total</p>
+        <p className="text-xl font-semibold text-[#172033]">
+          {total.toLocaleString()}
         </p>
       </div>
-
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
-
-      <ActivitySection
-        title="Upcoming Meetings"
-        action={
-          <Link href="/app/meetings" className="text-xs text-primary">
-            View
-          </Link>
-        }
-      >
-        {loading ? (
-          <Skeleton className="h-24" />
-        ) : meetings.length === 0 ? (
-          <p className="text-sm text-[#64748B]">No upcoming meetings</p>
-        ) : (
-          <ul className="space-y-3">
-            {meetings.map((meeting) => (
-              <li key={meeting.id}>
-                <Link
-                  href={`/app/meetings/${meeting.id}`}
-                  className="block rounded-xl hover:bg-[#F8FAFC]"
-                >
-                  <div className="flex items-start gap-3 px-1 py-1">
-                    <div className="w-[58px] shrink-0">
-                      <p className="text-[11px] text-[#64748B]">
-                        {formatDate(meeting.startAt)}
-                      </p>
-                      <p className="text-sm font-semibold text-[#172033]">
-                        {formatTime(meeting.startAt)}
-                      </p>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-[#172033]">
-                        {meeting.title}
-                      </p>
-                      <p className="mt-0.5 truncate text-xs text-[#64748B]">
-                        {meeting.project?.name ??
-                          meeting.team?.name ??
-                          "No project"}
-                      </p>
-                      <span
-                        className={cn(
-                          "mt-1 inline-flex items-center gap-1 text-[11px] font-medium",
-                          meetingPlace(meeting) === "Online"
-                            ? "text-primary"
-                            : "text-[#64748B]",
-                        )}
-                      >
-                        {meetingPlace(meeting) === "Online" ? (
-                          <Video className="h-3 w-3" />
-                        ) : (
-                          <Clock className="h-3 w-3" />
-                        )}
-                        {meetingPlace(meeting)}
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </ActivitySection>
-
-      <ActivitySection
-        title="Upcoming Deadlines"
-        action={
-          <Link href="/app/calendar" className="text-xs text-primary">
-            View
-          </Link>
-        }
-      >
-        {loading ? (
-          <Skeleton className="h-20" />
-        ) : deadlines.length === 0 ? (
-          <p className="text-sm text-[#64748B]">No upcoming deadlines</p>
-        ) : (
-          <ul className="space-y-3">
-            {deadlines.map((item) => (
-              <li key={item.id}>
-                <Link
-                  href={item.href}
-                  className="flex items-start justify-between gap-3 rounded-xl px-1 py-1 hover:bg-[#F8FAFC]"
-                >
-                  <span className="min-w-0">
-                    <span className="flex items-center gap-1.5">
-                      <span
-                        className={cn(
-                          "h-1.5 w-1.5 shrink-0 rounded-full",
-                          item.kind === "task"
-                            ? "bg-primary"
-                            : item.kind === "milestone"
-                              ? "bg-[#F59E0B]"
-                              : "bg-[#64748B]",
-                        )}
-                      />
-                      <span className="truncate text-sm font-medium text-[#172033]">
-                        {item.title}
-                      </span>
-                    </span>
-                    <span className="mt-0.5 block truncate text-xs text-[#64748B]">
-                      {item.meta}
-                    </span>
-                  </span>
-                  <span className="shrink-0 text-xs text-[#64748B]">
-                    {formatDate(item.dueDate)}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </ActivitySection>
-
-      <ActivitySection
-        title="Recent Activity"
-        action={
-          <Link href="/app/activity" className="text-xs text-primary">
-            View all
-          </Link>
-        }
-      >
-        {loading ? (
-          <Skeleton className="h-24" />
-        ) : activity.length === 0 ? (
-          <p className="text-sm text-[#64748B]">No recent activity</p>
-        ) : (
-          <ol className="space-y-3">
-            {activity.map((item) => {
-              const href = activityHref(item.entityType, item.entityId);
-              const actorName = item.actor?.name ?? "Someone";
-              const actor =
-                item.actor?.id && item.actor.id === currentUserId
-                  ? "You"
-                  : actorName;
-              const body = (
-                <div className="flex items-start gap-2.5">
-                  <PersonAvatar name={actorName} size="sm" />
-                  <div className="min-w-0">
-                    <p className="text-sm leading-5 text-[#172033]">
-                      <span className="font-medium">{actor}</span> {item.title}
-                    </p>
-                    <p className="mt-0.5 text-[11px] text-[#64748B]">
-                      {resourceLabel(item.entityType)} ·{" "}
-                      {formatRelativeTime(item.createdAt)}
-                    </p>
-                  </div>
-                </div>
-              );
-              return (
-                <li key={item.id}>
-                  {href ? (
-                    <Link href={href} className="block hover:opacity-80">
-                      {body}
-                    </Link>
-                  ) : (
-                    body
-                  )}
-                </li>
-              );
-            })}
-          </ol>
-        )}
-      </ActivitySection>
     </div>
-  );
-}
-
-function ActivitySection({
-  title,
-  action,
-  children,
-}: {
-  title: string;
-  action?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <section>
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-[#64748B]">
-          {title}
-        </h3>
-        {action}
-      </div>
-      {children}
-    </section>
   );
 }

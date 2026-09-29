@@ -1360,38 +1360,55 @@ export class TasksService {
 
   async markOverdue(workspaceId?: string) {
     const now = new Date();
-    if (workspaceId) {
-      await this.prisma.$executeRaw`
-        UPDATE tasks
-        SET "preOverdueStatus" = status,
-            status = 'OVERDUE'::"TaskStatus"
-        WHERE "workspaceId" = ${workspaceId}
-          AND status IN (
-            'TODO'::"TaskStatus",
-            'IN_PROGRESS'::"TaskStatus",
-            'RETURNED'::"TaskStatus"
-          )
-          AND "dueDate" < ${now}
-          AND NOT EXISTS (
-            SELECT 1 FROM task_submissions s WHERE s."taskId" = tasks.id
-          )
-      `;
+    const candidates = await this.prisma.task.findMany({
+      where: {
+        ...(workspaceId ? { workspaceId } : {}),
+        status: {
+          in: [TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.RETURNED],
+        },
+        dueDate: { lt: now },
+        submissions: { none: {} },
+      },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        workspaceId: true,
+        ownerId: true,
+        assignees: { select: { userId: true } },
+      },
+    });
+    if (candidates.length === 0) {
       return;
     }
-    await this.prisma.$executeRaw`
-      UPDATE tasks
-      SET "preOverdueStatus" = status,
-          status = 'OVERDUE'::"TaskStatus"
-      WHERE status IN (
-          'TODO'::"TaskStatus",
-          'IN_PROGRESS'::"TaskStatus",
-          'RETURNED'::"TaskStatus"
-        )
-        AND "dueDate" < ${now}
-        AND NOT EXISTS (
-          SELECT 1 FROM task_submissions s WHERE s."taskId" = tasks.id
-        )
-    `;
+
+    await this.prisma.$transaction(
+      candidates.map((task) =>
+        this.prisma.task.update({
+          where: { id: task.id },
+          data: {
+            preOverdueStatus: task.status,
+            status: TaskStatus.OVERDUE,
+          },
+        }),
+      ),
+    );
+
+    for (const task of candidates) {
+      try {
+        await this.automations.dispatch({
+          workspaceId: task.workspaceId,
+          trigger: AutomationTrigger.TASK_OVERDUE,
+          ownerId: task.ownerId,
+          assigneeIds: task.assignees.map((item) => item.userId),
+          title: `Task overdue: ${task.title}`,
+          entityId: task.id,
+          entityType: 'task',
+        });
+      } catch {
+        // Overdue status is already saved.
+      }
+    }
   }
 
   private async completeApprovedReview(workspaceId: string, taskId: string) {

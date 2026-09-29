@@ -1,12 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { EmptyState, PageHeader, PageShell, Surface } from "@/components/page-header";
+import {
+  EmptyState,
+  ListPanel,
+  PageHeader,
+  PageShell,
+  SegmentedControl,
+} from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  notificationHref,
-} from "@/features/collaboration/api";
+import { notificationHref } from "@/features/collaboration/api";
 import {
   useMarkAllRead,
   useMarkNotificationRead,
@@ -31,66 +35,73 @@ export default function NotificationsPage() {
     <PageShell>
       <PageHeader
         title="Notifications"
-        description="Mentions, assignments, comments, and meeting reminders for this workspace."
+        description="Mentions, assignments, and reminders."
         actions={
-          (notifications.data?.unreadCount ?? 0) > 0 ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void markAll.mutate()}
-            >
-              Mark all as read
-            </Button>
-          ) : null
+          <div className="flex items-center gap-2">
+            <SegmentedControl
+              value={filter}
+              onChange={setFilter}
+              options={[
+                { value: "all", label: "All" },
+                { value: "unread", label: "Unread" },
+              ]}
+            />
+            {(notifications.data?.unreadCount ?? 0) > 0 ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void markAll.mutate()}
+              >
+                Mark all read
+              </Button>
+            ) : null}
+          </div>
         }
       />
-      <div className="flex gap-2">
-        <Button
-          size="sm"
-          variant={filter === "all" ? "default" : "outline"}
-          onClick={() => setFilter("all")}
-        >
-          All
-        </Button>
-        <Button
-          size="sm"
-          variant={filter === "unread" ? "default" : "outline"}
-          onClick={() => setFilter("unread")}
-        >
-          Unread
-        </Button>
-      </div>
       {notifications.isLoading ? (
         <Skeleton className="h-40 w-full" />
+      ) : notifications.isError ? (
+        <p className="text-sm text-destructive">{notifications.error.message}</p>
       ) : items.length === 0 ? (
-        <EmptyState title="You're all caught up." />
+        <EmptyState
+          title={filter === "unread" ? "No unread notifications" : "You're all caught up"}
+        />
       ) : (
-        <Surface className="space-y-1">
+        <ListPanel className="divide-y divide-[#E5E7EB]">
           {items.map((item) => (
             <button
               key={item.id}
               type="button"
               className={cn(
-                "block w-full rounded-xl px-3 py-2.5 text-left hover:bg-secondary",
-                !item.isRead && "bg-indigo-50/60",
+                "relative block w-full px-4 py-3 text-left hover:bg-[#F8FAFC]",
               )}
               onClick={() => {
                 if (!item.isRead) void markRead.mutate(item.id);
                 router.push(notificationHref(item));
               }}
             >
+              {!item.isRead ? (
+                <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full bg-primary" />
+              ) : null}
               <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium">{item.title}</p>
-                  <p className="text-xs text-muted-foreground">{item.message}</p>
+                <div className="min-w-0">
+                  <p
+                    className={cn(
+                      "text-[13px] text-[#172033]",
+                      !item.isRead && "font-medium",
+                    )}
+                  >
+                    {item.title}
+                  </p>
+                  <p className="mt-0.5 text-[12px] text-[#64748B]">{item.message}</p>
                 </div>
-                <p className="shrink-0 text-xs text-muted-foreground">
+                <p className="shrink-0 text-[12px] text-[#94A3B8]">
                   {formatRelativeTime(item.createdAt)}
                 </p>
               </div>
             </button>
           ))}
-        </Surface>
+        </ListPanel>
       )}
     </PageShell>
   );

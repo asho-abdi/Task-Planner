@@ -20,10 +20,10 @@ export function readImageAsDataUrl(file: File, maxBytes = 350_000) {
 }
 
 export const nativeSelectClass =
-  "flex h-10 w-full rounded-lg border border-input bg-card px-3 text-sm shadow-sm transition-colors focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50";
+  "flex h-10 w-full rounded-lg border border-input bg-card px-3 text-[14px] font-medium shadow-sm transition-colors focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50";
 
 export const nativeTextareaClass =
-  "flex min-h-24 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50";
+  "flex min-h-24 w-full rounded-lg border border-input bg-card px-3 py-2 text-[14px] font-medium leading-[1.5] shadow-sm placeholder:font-normal placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50";
 
 export function toDateInputValue(value: string | null | undefined) {
   return value ? value.slice(0, 10) : "";

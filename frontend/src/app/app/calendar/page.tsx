@@ -10,8 +10,8 @@ export default function CalendarPage() {
   return (
     <PageShell>
       <PageHeader
-        title="Team calendar"
-        description="Meetings, tasks, deadlines, and milestones for the current workspace. Filters stay on this page; switch workspaces from the sidebar."
+        title="Calendar"
+        description="Meetings, tasks, and milestones."
       />
       <TeamCalendar workspaceId={workspaceId} />
     </PageShell>

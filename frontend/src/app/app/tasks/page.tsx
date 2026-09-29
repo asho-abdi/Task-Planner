@@ -6,13 +6,13 @@ import { Suspense, useState, type FormEvent } from "react";
 import { LayoutGrid, List } from "lucide-react";
 import {
   EmptyState,
+  ListPanel,
   PageHeader,
   PageShell,
-  Surface,
+  SegmentedControl,
 } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/badge";
 import {
@@ -34,7 +34,7 @@ import {
 } from "@/features/tasks/types";
 import { useCurrentWorkspace } from "@/features/workspaces/hooks";
 import { AiPlanDialog } from "@/features/ai/ui";
-import { nativeSelectClass } from "@/lib/utils";
+import { cn, nativeSelectClass } from "@/lib/utils";
 import { useUiStore } from "@/store/ui-store";
 import { useWorkspaceStore } from "@/store/workspace-store";
 
@@ -49,7 +49,13 @@ const BOARD_COLUMNS: TaskStatus[] = [
 
 export default function TasksPage() {
   return (
-    <Suspense fallback={<PageShell><Skeleton className="h-40 w-full" /></PageShell>}>
+    <Suspense
+      fallback={
+        <PageShell>
+          <Skeleton className="h-40 w-full" />
+        </PageShell>
+      }
+    >
       <TasksPageContent />
     </Suspense>
   );
@@ -103,154 +109,132 @@ function TasksList({ initialQ }: { initialQ: string }) {
     <PageShell>
       <PageHeader
         title="Tasks"
-        description="Search, filter, and manage workspace tasks."
+        description="Search and filter workspace work."
         actions={
           <>
-            <div className="flex rounded-xl border border-border bg-card p-0.5">
-              <Button
-                type="button"
-                size="sm"
-                variant={view === "list" ? "secondary" : "ghost"}
-                onClick={() => setView("list")}
-              >
-                <List />
-                List
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={view === "board" ? "secondary" : "ghost"}
-                onClick={() => setView("board")}
-              >
-                <LayoutGrid />
-                Board
-              </Button>
-            </div>
-            <Button variant="outline" onClick={() => setPlanOpen(true)}>
+            <SegmentedControl
+              value={view}
+              onChange={setView}
+              options={[
+                { value: "list", label: "List", icon: <List className="h-3.5 w-3.5" /> },
+                {
+                  value: "board",
+                  label: "Board",
+                  icon: <LayoutGrid className="h-3.5 w-3.5" />,
+                },
+              ]}
+            />
+            <Button variant="outline" size="sm" onClick={() => setPlanOpen(true)}>
               Plan
             </Button>
             {canWrite ? (
-              <Button onClick={() => openTaskCreate()}>New task</Button>
+              <Button size="sm" onClick={() => openTaskCreate()}>
+                New task
+              </Button>
             ) : null}
           </>
         }
       />
 
-      <Surface>
-        <form
-          className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
-          onSubmit={applySearch}
+      <form
+        className="flex flex-col gap-2 lg:flex-row lg:items-center"
+        onSubmit={applySearch}
+      >
+        <Input
+          value={draftSearch}
+          onChange={(event) => setDraftSearch(event.target.value)}
+          placeholder="Search tasks"
+          className="h-8 lg:max-w-xs"
+          aria-label="Search tasks"
+        />
+        <select
+          className={cn(nativeSelectClass, "h-8 lg:max-w-[160px]")}
+          aria-label="Status"
+          value={status}
+          onChange={(event) => {
+            setPage(1);
+            setStatus(event.target.value as TaskStatus | "");
+          }}
         >
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="task-search">Search</Label>
-            <div className="flex gap-2">
-              <Input
-                id="task-search"
-                value={draftSearch}
-                onChange={(event) => setDraftSearch(event.target.value)}
-                placeholder="Title or description"
-              />
-              <Button type="submit" variant="outline">
-                Search
-              </Button>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="filter-status">Status</Label>
-            <select
-              id="filter-status"
-              className={nativeSelectClass}
-              value={status}
-              onChange={(event) => {
-                setPage(1);
-                setStatus(event.target.value as TaskStatus | "");
-              }}
-            >
-              <option value="">Any</option>
-              {TASK_STATUSES.map((item) => (
-                <option key={item} value={item}>
-                  {item.replaceAll("_", " ")}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="filter-priority">Priority</Label>
-            <select
-              id="filter-priority"
-              className={nativeSelectClass}
-              value={priority}
-              onChange={(event) => {
-                setPage(1);
-                setPriority(event.target.value as Priority | "");
-              }}
-            >
-              <option value="">Any</option>
-              {PRIORITIES.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="filter-project">Project</Label>
-            {projects.isLoading ? (
-              <Skeleton className="h-9 w-full" />
-            ) : (
-              <select
-                id="filter-project"
-                className={nativeSelectClass}
-                value={projectId}
-                onChange={(event) => {
-                  setPage(1);
-                  setProjectId(event.target.value);
-                }}
-              >
-                <option value="">Any project</option>
-                {(projects.data ?? []).map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={includeArchived}
-              onChange={(event) => {
-                setPage(1);
-                setIncludeArchived(event.target.checked);
-              }}
-            />
-            Include archived
-          </label>
-        </form>
-      </Surface>
+          <option value="">Any status</option>
+          {TASK_STATUSES.map((item) => (
+            <option key={item} value={item}>
+              {item.replaceAll("_", " ")}
+            </option>
+          ))}
+        </select>
+        <select
+          className={cn(nativeSelectClass, "h-8 lg:max-w-[140px]")}
+          aria-label="Priority"
+          value={priority}
+          onChange={(event) => {
+            setPage(1);
+            setPriority(event.target.value as Priority | "");
+          }}
+        >
+          <option value="">Any priority</option>
+          {PRIORITIES.map((item) => (
+            <option key={item} value={item}>
+              {item}
+            </option>
+          ))}
+        </select>
+        {projects.isLoading ? (
+          <Skeleton className="h-8 w-40" />
+        ) : (
+          <select
+            className={cn(nativeSelectClass, "h-8 lg:max-w-[180px]")}
+            aria-label="Project"
+            value={projectId}
+            onChange={(event) => {
+              setPage(1);
+              setProjectId(event.target.value);
+            }}
+          >
+            <option value="">Any project</option>
+            {(projects.data ?? []).map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+        )}
+        <Button type="submit" variant="outline" size="sm" className="h-8">
+          Search
+        </Button>
+        <label className="flex items-center gap-2 text-[12px] text-[#64748B] lg:ml-auto">
+          <input
+            type="checkbox"
+            checked={includeArchived}
+            onChange={(event) => {
+              setPage(1);
+              setIncludeArchived(event.target.checked);
+            }}
+          />
+          Archived
+        </label>
+      </form>
 
       {tasks.isLoading ? (
-        <div className="space-y-3">
-          <Skeleton className="h-16 w-full" />
-          <Skeleton className="h-16 w-full" />
-        </div>
+        <Skeleton className="h-40 w-full" />
       ) : tasks.isError ? (
         <p className="text-sm text-destructive">{tasks.error.message}</p>
       ) : items.length === 0 ? (
         <EmptyState
-          title="No tasks match"
-          description="Try another search or create a task."
+          title="No matching tasks"
+          description="Try another search, or create a task."
           action={
             canWrite ? (
-              <Button onClick={() => openTaskCreate()}>New task</Button>
+              <Button size="sm" onClick={() => openTaskCreate()}>
+                New task
+              </Button>
             ) : undefined
           }
         />
       ) : view === "board" ? (
         <TaskBoard items={items} />
       ) : (
-        <Surface className="p-0 sm:p-0">
+        <ListPanel>
           <Table>
             <TableHeader>
               <TableRow>
@@ -273,14 +257,17 @@ function TasksList({ initialQ }: { initialQ: string }) {
                       {task.title}
                     </Link>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-[#64748B]">
                     {task.project?.name ?? "No project"}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-[#64748B]">
                     {(task.assignees ?? []).length
-                      ? (task.assignees ?? []).map((person) => person.name).join(", ")
+                      ? (task.assignees ?? [])
+                          .map((person) => person.name)
+                          .join(", ")
                       : (task.assignee?.name ?? "Unassigned")}
-                    {task.submissionProgress && task.submissionProgress.total > 1
+                    {task.submissionProgress &&
+                    task.submissionProgress.total > 1
                       ? task.submissionProgress.approved > 0
                         ? ` · ${task.submissionProgress.approved} of ${task.submissionProgress.total} approved`
                         : ` · ${task.submissionProgress.submitted} of ${task.submissionProgress.total} submitted`
@@ -292,18 +279,18 @@ function TasksList({ initialQ }: { initialQ: string }) {
                   <TableCell>
                     <StatusBadge value={task.priority} />
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-[#64748B]">
                     {task.dueDate ? task.dueDate.slice(0, 10) : "—"}
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        </Surface>
+        </ListPanel>
       )}
 
-      <div className="flex items-center justify-between text-sm">
-        <p className="text-muted-foreground">
+      <div className="flex items-center justify-between text-[13px]">
+        <p className="text-[#64748B]">
           {total} tasks · page {page} of {pageCount}
         </p>
         <div className="flex gap-2">
@@ -337,31 +324,33 @@ function TasksList({ initialQ }: { initialQ: string }) {
 function TaskBoard({ items }: { items: Task[] }) {
   const columns = includeArchivedColumns(items);
   return (
-    <div className="flex gap-4 overflow-x-auto pb-2">
+    <div className="flex gap-3 overflow-x-auto pb-2">
       {columns.map((status) => {
         const columnItems = items.filter((task) => task.status === status);
         return (
           <div
             key={status}
-            className="w-72 shrink-0 rounded-xl bg-secondary p-3"
+            className="w-64 shrink-0 rounded-[10px] border border-[#E5E7EB] bg-[#F8FAFC] p-2"
           >
-            <div className="mb-3 flex items-center justify-between px-1">
-              <p className="text-sm font-medium">
+            <div className="mb-2 flex items-center justify-between px-1.5 py-1">
+              <p className="text-[12px] font-medium text-[#172033]">
                 {status.replaceAll("_", " ")}
               </p>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-[11px] text-[#94A3B8]">
                 {columnItems.length}
               </span>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {columnItems.map((task) => (
                 <Link
                   key={task.id}
                   href={`/app/tasks/${task.id}`}
-                  className="block rounded-lg border border-border bg-card p-3 shadow-[var(--shadow-soft)] transition-colors hover:border-primary/40"
+                  className="block rounded-md border border-[#E5E7EB] bg-white px-3 py-2.5 hover:border-[#CBD5E1]"
                 >
-                  <p className="text-sm font-medium">{task.title}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="text-[13px] font-medium text-[#172033]">
+                    {task.title}
+                  </p>
+                  <p className="mt-0.5 text-[12px] text-[#64748B]">
                     {task.project?.name ?? "No project"}
                   </p>
                   <div className="mt-2">

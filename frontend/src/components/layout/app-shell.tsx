@@ -19,6 +19,7 @@ import {
   Files,
   FileText,
   FolderKanban,
+  Gauge,
   LayoutDashboard,
   ListTodo,
   LogOut,
@@ -33,6 +34,8 @@ import {
   TriangleAlert,
   Users,
   X,
+  Zap,
+  type LucideIcon,
 } from "lucide-react";
 import { WorkspaceSwitcher } from "@/features/workspaces/workspace-switcher";
 import { Button } from "@/components/ui/button";
@@ -87,7 +90,7 @@ const NAV = [
     label: "Insights",
     items: [
       { href: "/app/goals", label: "Goals", icon: Target },
-      { href: "/app/workload", label: "Workload", icon: Users },
+      { href: "/app/workload", label: "Workload", icon: Gauge },
       { href: "/app/reports", label: "Reports", icon: BarChart3 },
       { href: "/app/activity", label: "Activity", icon: Activity },
     ],
@@ -97,6 +100,7 @@ const NAV = [
     items: [
       { href: "/app/pages", label: "Pages", icon: FileText },
       { href: "/app/todos", label: "Todos", icon: ListTodo },
+      { href: "/app/automations", label: "Automations", icon: Zap },
       { href: "/app/risk", label: "Risk", icon: TriangleAlert },
     ],
   },
@@ -116,6 +120,64 @@ function isActive(pathname: string, href: string, exact?: boolean) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function pageTitle(
+  pathname: string,
+  groups: Array<{
+    items: Array<{ href: string; label: string; exact?: boolean }>;
+  }>,
+) {
+  if (pathname.startsWith("/app/settings")) return "Settings";
+  if (pathname.startsWith("/app/users")) return "Users";
+  const items = groups.flatMap((group) => group.items);
+  const match = items
+    .filter((item) => isActive(pathname, item.href, item.exact))
+    .sort((a, b) => b.href.length - a.href.length)[0];
+  return match?.label ?? "Workspace";
+}
+
+function SidebarNavLink({
+  href,
+  label,
+  icon: Icon,
+  active,
+  collapsed,
+  onNavigate,
+  badge,
+}: {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  active: boolean;
+  collapsed: boolean;
+  onNavigate: () => void;
+  badge?: number;
+}) {
+  return (
+    <Link
+      href={href}
+      title={label}
+      onClick={onNavigate}
+      className={cn(
+        "relative flex items-center gap-2.5 rounded-md px-2 py-[7px] text-[15px] font-bold leading-[1.3] text-white transition-colors",
+        collapsed && "justify-center px-0",
+        active ? "font-extrabold" : "hover:text-white",
+      )}
+    >
+      <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+      {!collapsed ? <span className="min-w-0 truncate">{label}</span> : null}
+      {badge && badge > 0 ? (
+        collapsed ? (
+          <span className="absolute ml-4 mt-[-10px] h-1.5 w-1.5 rounded-full bg-primary" />
+        ) : (
+          <span className="ml-auto rounded-md bg-white/10 px-1.5 py-px text-[10px] font-semibold tabular-nums text-white">
+            {badge > 99 ? "99+" : badge}
+          </span>
+        )
+      ) : null}
+    </Link>
+  );
+}
+
 export function AppShell({ user, children }: AppShellProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -124,10 +186,6 @@ export function AppShell({ user, children }: AppShellProps) {
   const currentWorkspaceId = useWorkspaceStore(
     (state) => state.currentWorkspaceId,
   );
-  const setCurrentWorkspaceId = useWorkspaceStore(
-    (state) => state.setCurrentWorkspaceId,
-  );
-  const hydrate = useWorkspaceStore((state) => state.hydrate);
   const setOpenCreateDialog = useUiStore((state) => state.setOpenCreateDialog);
   const openTaskCreate = useUiStore((state) => state.openTaskCreate);
   const collapsed = useUiStore((state) => state.sidebarCollapsed);
@@ -145,10 +203,6 @@ export function AppShell({ user, children }: AppShellProps) {
   const markRead = useMarkNotificationRead();
   const isSystemAdmin =
     user.role === "SUPER_ADMIN" || user.role === "ADMIN";
-
-  useEffect(() => {
-    hydrate();
-  }, [hydrate]);
 
   useEffect(() => {
     const html = document.documentElement;
@@ -240,24 +294,13 @@ export function AppShell({ user, children }: AppShellProps) {
     return () => document.removeEventListener("pointerdown", close);
   }, [headerMenu]);
 
-  useEffect(() => {
-    if (!workspaces.data?.length) {
-      return;
-    }
-    const exists = workspaces.data.some(
-      (workspace) => workspace.id === currentWorkspaceId,
-    );
-    if (!currentWorkspaceId || !exists) {
-      setCurrentWorkspaceId(workspaces.data[0].id);
-    }
-  }, [currentWorkspaceId, workspaces.data, setCurrentWorkspaceId]);
-
   const initials = user.name
     .split(" ")
     .map((part) => part[0])
     .join("")
     .slice(0, 2)
     .toUpperCase();
+  const unreadCount = notifications.data?.unreadCount ?? 0;
 
   function submitSearch(event: FormEvent) {
     event.preventDefault();
@@ -269,118 +312,100 @@ export function AppShell({ user, children }: AppShellProps) {
     <div className="flex h-full flex-col">
       <div
         className={cn(
-          "flex items-center gap-2.5 px-3 pt-4",
+          "flex h-14 items-center gap-2.5 border-b border-white/[0.06] px-3",
           collapsed && "justify-center px-2",
         )}
       >
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-[10px] font-semibold text-white">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-[10px] font-bold tracking-wide text-white">
           TPT
         </div>
         {!collapsed ? (
-          <div className="min-w-0">
-            <p
-              className="truncate text-[13px] font-semibold leading-tight text-white"
-              title="Task Planner and Tracker"
-            >
-              Task Planner and Tracker
-            </p>
-            <p className="truncate text-[11px] text-sidebar-foreground/60">
-              Workspace
-            </p>
-          </div>
+          <p
+            className="min-w-0 truncate text-[17px] font-extrabold leading-[1.2] tracking-[-0.02em] text-white"
+            title="Task Planner and Tracker"
+          >
+            Task Planner
+          </p>
         ) : null}
       </div>
 
       <WorkspaceSwitcher collapsed={collapsed} />
 
-      <nav className="mt-4 flex-1 space-y-4 overflow-y-auto px-2.5 pb-3">
-        {navGroups.map((group) => (
+      <nav className="mt-2 flex-1 space-y-5 overflow-y-auto px-2 pb-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        {navGroups.map((group, index) => (
           <div key={group.label} className="space-y-0.5">
-            {!collapsed ? (
-              <p className="px-2.5 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-sidebar-foreground/45">
+            {collapsed ? (
+              index > 0 ? (
+                <div className="mx-auto my-2 h-px w-5 bg-white/10" />
+              ) : null
+            ) : (
+              <p className="px-2 pb-1.5 pt-1 text-[11px] font-extrabold uppercase leading-[1.2] tracking-[0.10em] text-[#64748B]">
                 {group.label}
               </p>
-            ) : null}
-            {group.items.map((item) => {
-              const active = isActive(pathname, item.href, item.exact);
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  title={item.label}
-                  onClick={() => setMobileOpen(false)}
-                  className={cn(
-                    "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition-colors duration-150",
-                    collapsed && "justify-center px-2",
-                    active
-                      ? "bg-primary text-white"
-                      : "text-sidebar-foreground hover:bg-white/10 hover:text-white",
-                  )}
-                >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  {!collapsed ? item.label : null}
-                </Link>
-              );
-            })}
+            )}
+            {group.items.map((item) => (
+              <SidebarNavLink
+                key={item.href}
+                href={item.href}
+                label={item.label}
+                icon={item.icon}
+                active={isActive(pathname, item.href, item.exact)}
+                collapsed={collapsed}
+                onNavigate={() => setMobileOpen(false)}
+                badge={
+                  item.href === "/app/notifications" ? unreadCount : undefined
+                }
+              />
+            ))}
           </div>
         ))}
       </nav>
 
-      <div className="space-y-1 border-t border-white/10 px-2.5 py-3">
+      <div className="border-t border-white/[0.06] p-2">
         <div
           className={cn(
-            "flex items-center gap-2.5 rounded-lg px-2.5 py-2",
-            collapsed && "justify-center px-2",
+            "flex items-center gap-2 rounded-md px-1.5 py-1.5",
+            collapsed && "justify-center px-0",
           )}
         >
-          <div className="relative shrink-0">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-white">
-              {initials}
-            </div>
-            <span
-              className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-sidebar bg-[#16A34A]"
-              title="Active"
-            />
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1E293B] text-[10px] font-semibold text-white">
+            {initials}
           </div>
           {!collapsed ? (
-            <div className="min-w-0">
-              <p className="truncate text-[13px] font-medium text-white">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[14px] font-bold leading-[1.3] text-white">
                 {user.name}
               </p>
-              <p className="flex items-center gap-1 text-[11px] text-[#16A34A]">
-                Active
+              <p className="truncate text-[12px] font-medium leading-[1.4] text-[#64748B]">
+                {user.email}
               </p>
             </div>
           ) : null}
         </div>
-        <Link
+        <SidebarNavLink
           href="/app/settings"
-          title="Settings"
-          onClick={() => setMobileOpen(false)}
-          className={cn(
-            "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition-colors duration-150",
-            collapsed && "justify-center px-2",
-            pathname.startsWith("/app/settings")
-              ? "bg-primary text-white"
-              : "text-sidebar-foreground hover:bg-white/10 hover:text-white",
-          )}
-        >
-          <Settings className="h-4 w-4 shrink-0" />
-          {!collapsed ? "Settings" : null}
-        </Link>
+          label="Settings"
+          icon={Settings}
+          active={pathname.startsWith("/app/settings")}
+          collapsed={collapsed}
+          onNavigate={() => setMobileOpen(false)}
+        />
         <button
           type="button"
           title="Logout"
           className={cn(
-            "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium text-sidebar-foreground transition-colors hover:bg-white/10 hover:text-white",
-            collapsed && "justify-center px-2",
+            "flex w-full items-center gap-2.5 rounded-md px-2 py-[7px] text-[15px] font-bold leading-[1.3] text-white transition-colors",
+            collapsed && "justify-center px-0",
           )}
           onClick={() => logout.mutate()}
           disabled={logout.isPending}
         >
-          <LogOut className="h-4 w-4 shrink-0" />
-          {!collapsed ? (logout.isPending ? "Signing out…" : "Logout") : null}
+          <LogOut className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+          {!collapsed
+            ? logout.isPending
+              ? "Signing out…"
+              : "Log out"
+            : null}
         </button>
       </div>
     </div>
@@ -399,9 +424,9 @@ export function AppShell({ user, children }: AppShellProps) {
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex h-svh w-[248px] flex-col overflow-hidden border-r border-white/5 bg-sidebar transition-transform duration-200 lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 flex h-svh w-[240px] flex-col overflow-hidden bg-sidebar transition-transform duration-200 lg:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
-          collapsed && "lg:w-[80px]",
+          collapsed && "lg:w-[72px]",
         )}
       >
         {sidebar}
@@ -410,14 +435,14 @@ export function AppShell({ user, children }: AppShellProps) {
       <div
         className={cn(
           "flex h-svh min-w-0 flex-col overflow-hidden",
-          collapsed ? "lg:ml-[80px]" : "lg:ml-[248px]",
+          collapsed ? "lg:ml-[72px]" : "lg:ml-[240px]",
         )}
       >
-        <header className="z-30 flex shrink-0 items-center gap-3 border-b border-border bg-background/90 px-4 py-3 backdrop-blur-md sm:px-8">
+        <header className="z-30 flex h-14 shrink-0 items-center gap-3 border-b border-[#E5E7EB] bg-white px-3 sm:px-5">
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden"
+            className="h-8 w-8 text-[#64748B] lg:hidden"
             onClick={() => setMobileOpen(true)}
             aria-label="Open navigation"
           >
@@ -426,27 +451,39 @@ export function AppShell({ user, children }: AppShellProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="hidden lg:inline-flex"
+            className="hidden h-8 w-8 text-[#64748B] hover:text-[#172033] lg:inline-flex"
             onClick={toggleCollapsed}
             aria-label="Collapse sidebar"
           >
             <PanelLeft />
           </Button>
-          <form className="relative min-w-0 flex-1" onSubmit={submitSearch}>
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <h1 className="hidden min-w-0 shrink-0 text-[18px] font-bold leading-[1.2] tracking-[-0.02em] text-[#172033] md:block lg:text-[19px]">
+            {pageTitle(pathname, navGroups)}
+          </h1>
+          <form
+            className="relative min-w-0 flex-1"
+            onSubmit={submitSearch}
+          >
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#94A3B8]" />
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search tasks or press Ctrl+K"
-              className="h-9 max-w-md rounded-full border border-[#E5E7EB] bg-white pl-9 shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
+              placeholder="Search tasks"
+              className="h-8 max-w-lg rounded-md border-[#E5E7EB] bg-[#F8FAFC] pl-9 pr-16 text-[14px] font-medium shadow-none placeholder:font-normal placeholder:text-[#94A3B8]"
               aria-label="Search tasks"
             />
+            <button
+              type="button"
+              onClick={() => setCommandOpen(true)}
+              className="absolute right-1.5 top-1/2 hidden -translate-y-1/2 items-center rounded border border-[#E5E7EB] bg-white px-1.5 py-0.5 text-[12px] font-semibold leading-none text-[#94A3B8] sm:inline-flex"
+            >
+              Ctrl K
+            </button>
           </form>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-1.5">
             <div className="relative" ref={notifyMenuRef}>
-              <Button
-                variant="ghost"
-                size="icon"
+              <button
+                type="button"
                 aria-label="Notifications"
                 onClick={(event) => {
                   event.stopPropagation();
@@ -455,33 +492,35 @@ export function AppShell({ user, children }: AppShellProps) {
                   );
                 }}
                 onPointerDown={(event) => event.stopPropagation()}
-                className="relative"
+                className="relative flex h-8 w-8 items-center justify-center rounded-md text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#172033]"
               >
-                <Bell />
-                {(notifications.data?.unreadCount ?? 0) > 0 ? (
-                  <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary" />
+                <Bell className="h-4 w-4" strokeWidth={1.75} />
+                {unreadCount > 0 ? (
+                  <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-primary" />
                 ) : null}
-              </Button>
+              </button>
               {headerMenu === "notify" ? (
                 <div
-                  className="absolute right-0 top-11 z-40 w-80 rounded-xl border border-border bg-card p-3 shadow-[0_16px_40px_rgba(15,23,42,0.12)]"
+                  className="absolute right-0 top-10 z-40 w-80 overflow-hidden rounded-lg border border-[#E5E7EB] bg-white shadow-[0_12px_32px_rgba(15,23,42,0.1)]"
                   onPointerDown={(event) => event.stopPropagation()}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium">Notifications</p>
-                    {(notifications.data?.unreadCount ?? 0) > 0 ? (
+                  <div className="flex items-center justify-between gap-2 border-b border-[#E5E7EB] px-3 py-2.5">
+                    <p className="text-[14px] font-bold text-[#172033]">
+                      Notifications
+                    </p>
+                    {unreadCount > 0 ? (
                       <button
                         type="button"
-                        className="text-xs text-primary"
+                        className="text-[13px] font-medium text-primary"
                         onClick={() => void markAllRead.mutate()}
                       >
                         Mark all read
                       </button>
                     ) : null}
                   </div>
-                  <div className="mt-2 max-h-72 space-y-2 overflow-y-auto">
+                  <div className="max-h-72 overflow-y-auto">
                     {(notifications.data?.items ?? []).length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
+                      <p className="px-3 py-6 text-[14px] font-medium text-[#64748B]">
                         You&apos;re all caught up.
                       </p>
                     ) : (
@@ -490,8 +529,8 @@ export function AppShell({ user, children }: AppShellProps) {
                           key={item.id}
                           type="button"
                           className={cn(
-                            "block w-full rounded-xl px-2 py-2 text-left hover:bg-secondary",
-                            !item.isRead && "bg-indigo-50/70",
+                            "relative block w-full border-b border-[#F1F5F9] px-3 py-2.5 text-left last:border-0 hover:bg-[#F8FAFC]",
+                            !item.isRead && "bg-[#F8FAFC]",
                           )}
                           onClick={() => {
                             setHeaderMenu(null);
@@ -499,27 +538,33 @@ export function AppShell({ user, children }: AppShellProps) {
                             router.push(notificationHref(item));
                           }}
                         >
-                          <p className="text-sm font-medium">{item.title}</p>
-                          <p className="text-xs text-muted-foreground">
+                          {!item.isRead ? (
+                            <span className="absolute left-0 top-3 bottom-3 w-[2px] bg-primary" />
+                          ) : null}
+                          <p className="text-[14px] font-semibold text-[#172033]">
+                            {item.title}
+                          </p>
+                          <p className="mt-0.5 line-clamp-2 text-[12px] font-medium text-[#64748B]">
                             {item.message}
                           </p>
                         </button>
                       ))
                     )}
-                    <Link
-                      href="/app/notifications"
-                      className="mt-2 block text-center text-xs text-primary"
-                      onClick={() => setHeaderMenu(null)}
-                    >
-                      Open notification center
-                    </Link>
                   </div>
+                  <Link
+                    href="/app/notifications"
+                    className="block border-t border-[#E5E7EB] px-3 py-2 text-center text-[13px] font-semibold text-primary"
+                    onClick={() => setHeaderMenu(null)}
+                  >
+                    View all
+                  </Link>
                 </div>
               ) : null}
             </div>
             <div className="relative" ref={createMenuRef}>
               <Button
                 size="sm"
+                className="h-8"
                 onClick={(event) => {
                   event.stopPropagation();
                   setHeaderMenu((current) =>
@@ -533,14 +578,14 @@ export function AppShell({ user, children }: AppShellProps) {
               </Button>
               {headerMenu === "create" ? (
                 <div
-                  className="absolute right-0 top-11 z-40 w-48 overflow-hidden rounded-xl border border-border bg-card py-1 shadow-[0_16px_40px_rgba(15,23,42,0.12)]"
+                  className="absolute right-0 top-10 z-40 w-44 overflow-hidden rounded-lg border border-[#E5E7EB] bg-white py-1 shadow-[0_12px_32px_rgba(15,23,42,0.1)]"
                   onPointerDown={(event) => event.stopPropagation()}
                 >
                   {CREATE_ITEMS.map((item) => (
                     <button
                       key={item.type}
                       type="button"
-                      className="flex w-full px-3 py-2 text-left text-sm transition-colors hover:bg-secondary"
+                      className="flex w-full px-3 py-1.5 text-left text-[14px] font-medium text-[#172033] hover:bg-[#F8FAFC]"
                       onPointerDown={(event) => {
                         event.preventDefault();
                         event.stopPropagation();
@@ -553,9 +598,21 @@ export function AppShell({ user, children }: AppShellProps) {
                 </div>
               ) : null}
             </div>
+            <Link
+              href="/app/settings"
+              title={user.name}
+              className="ml-1 hidden h-8 items-center gap-2 rounded-md pl-1 pr-2 hover:bg-[#F8FAFC] sm:flex"
+            >
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-white">
+                {initials}
+              </span>
+              <span className="max-w-[120px] truncate text-[14px] font-bold text-[#172033]">
+                {user.name.split(" ")[0]}
+              </span>
+            </Link>
           </div>
         </header>
-        <main className="min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-8 sm:py-8">
+        <main className="min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6 sm:py-6">
           <PendingInvitesBanner />
           {children}
         </main>

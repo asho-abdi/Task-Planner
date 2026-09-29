@@ -35,15 +35,18 @@ export function WorkspaceSwitcher({ collapsed }: { collapsed?: boolean }) {
   const menu = (
     <div
       className={cn(
-        "absolute z-30 overflow-hidden rounded-xl border border-white/10 bg-[#111827] py-1 shadow-xl",
-        collapsed ? "left-full top-0 ml-2 w-56" : "mt-2 w-full",
+        "absolute z-30 overflow-hidden rounded-xl border border-white/10 bg-[#111827] py-1 shadow-[0_16px_40px_rgba(0,0,0,0.35)]",
+        collapsed ? "left-full top-0 ml-2 w-56" : "mt-1.5 w-full",
       )}
     >
       {(workspaces.data ?? []).map((workspace) => (
         <button
           key={workspace.id}
           type="button"
-          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-white hover:bg-white/10"
+          className={cn(
+            "flex w-full items-center gap-2.5 px-3 py-2 text-left text-[14px] font-semibold text-white transition-colors hover:bg-white/[0.08]",
+            workspace.id === currentWorkspaceId && "bg-white/[0.06]",
+          )}
           onClick={() => {
             setCurrentWorkspaceId(workspace.id);
             setOpen(false);
@@ -52,31 +55,31 @@ export function WorkspaceSwitcher({ collapsed }: { collapsed?: boolean }) {
           <WorkspaceMark name={workspace.name} logo={workspace.logo} />
           <span className="min-w-0 flex-1 truncate">{workspace.name}</span>
           {workspace.id === currentWorkspaceId ? (
-            <Check className="h-3.5 w-3.5 text-primary" />
+            <Check className="h-3.5 w-3.5 text-primary" strokeWidth={2} />
           ) : null}
         </button>
       ))}
       <button
         type="button"
-        className="flex w-full items-center gap-2 border-t border-white/10 px-3 py-2 text-left text-sm text-white hover:bg-white/10"
+        className="flex w-full items-center gap-2.5 border-t border-white/10 px-3 py-2 text-left text-[14px] font-semibold text-[#94A3B8] transition-colors hover:bg-white/[0.06] hover:text-white"
         onClick={() => {
           setOpen(false);
           setOpenCreateDialog("workspace");
         }}
       >
-        <Plus className="h-3.5 w-3.5" />
-            Create Workspace
+        <Plus className="h-3.5 w-3.5" strokeWidth={1.75} />
+        Create workspace
       </button>
     </div>
   );
 
   if (collapsed) {
     return (
-      <div ref={rootRef} className="relative flex justify-center px-2 pt-5">
+      <div ref={rootRef} className="relative flex justify-center px-2 py-2">
         <button
           type="button"
           title={current?.name ?? "Workspace"}
-          className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-white/10 text-xs font-semibold text-white"
+          className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-white/[0.06]"
           onClick={() => setOpen((value) => !value)}
         >
           <WorkspaceMark name={current?.name} logo={current?.logo} />
@@ -87,18 +90,20 @@ export function WorkspaceSwitcher({ collapsed }: { collapsed?: boolean }) {
   }
 
   return (
-    <div ref={rootRef} className="relative px-3 pt-5">
+    <div ref={rootRef} className="relative px-2 py-2">
       <button
         type="button"
         aria-label="Workspace"
-        className="flex h-10 w-full items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 text-left text-sm text-white outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+        className="flex h-8 w-full items-center justify-between rounded-md px-2 text-left text-[14px] font-bold leading-[1.3] text-white outline-none hover:bg-white/[0.06] focus-visible:bg-white/[0.06]"
         onClick={() => setOpen((value) => !value)}
       >
         <span className="flex min-w-0 items-center gap-2">
           <WorkspaceMark name={current?.name} logo={current?.logo} />
-          <span className="truncate">{current?.name ?? "Select workspace"}</span>
+          <span className="truncate font-bold">
+            {current?.name ?? "Select workspace"}
+          </span>
         </span>
-        <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 opacity-70" />
+        <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-[#64748B]" />
       </button>
       {open ? menu : null}
     </div>
@@ -120,14 +125,14 @@ export function WorkspaceMark({
       <img
         src={logo}
         alt=""
-        className={cn("h-6 w-6 rounded-md object-cover", className)}
+        className={cn("h-5 w-5 rounded-md object-cover", className)}
       />
     );
   }
   return (
     <span
       className={cn(
-        "flex h-6 w-6 items-center justify-center rounded-md bg-primary text-[10px] font-semibold text-white",
+        "flex h-5 w-5 items-center justify-center rounded-md bg-primary text-[9px] font-semibold text-white",
         className,
       )}
     >

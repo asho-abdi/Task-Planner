@@ -1,10 +1,90 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
+import { Instrument_Serif } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+const display = Instrument_Serif({
+  weight: "400",
+  subsets: ["latin"],
+  display: "swap",
+});
 
 const HIGHLIGHTS = [
-  "Workspace-scoped projects, tasks, and meetings",
-  "Roles for owners, admins, members, and viewers",
-  "Invites that expire in seven days",
+  { n: "01", text: "Projects, tasks, and meetings stay in one workspace." },
+  { n: "02", text: "Owners, admins, members, and viewers — by design." },
+  { n: "03", text: "Invites expire in seven days, not forever." },
 ];
+
+export const authFieldClass =
+  "h-11 rounded-md border-[#E7E2D9] bg-white shadow-none placeholder:text-[#A8A29A] focus-visible:border-[#635BFF] focus-visible:ring-[#635BFF]/20";
+
+export const authLineField =
+  "h-10 w-full rounded-none border-0 border-b border-[#D8DEE9] bg-transparent px-0 text-[15px] font-medium text-[#1F2937] shadow-none placeholder:font-medium placeholder:text-[#111827] focus-visible:border-[#2D3766] focus-visible:outline-none focus-visible:ring-0";
+
+export function AuthBrandLink() {
+  return (
+    <Link href="/" className="flex items-center gap-2.5">
+      <span className="relative h-7 w-8 shrink-0">
+        <span className="absolute left-0 top-0 h-5 w-5 rounded-[3px] bg-[#635BFF]" />
+        <span className="absolute bottom-0 right-0 h-5 w-5 rounded-[3px] bg-[#8B83FF]/90" />
+      </span>
+      <span className="text-[15px] font-semibold tracking-tight text-[#1F2937]">
+        Task Planner and Tracker
+      </span>
+    </Link>
+  );
+}
+
+export function AuthRocketPanel() {
+  return (
+    <div className="absolute inset-0">
+      <span className="absolute left-[18%] top-[22%] h-2 w-2 rotate-45 bg-[#F4C6D7]" />
+      <span className="absolute right-[22%] top-[18%] h-2.5 w-2.5 rotate-45 bg-[#7EDDD3]" />
+      <span className="absolute right-[16%] top-[38%] h-2 w-2 rotate-45 bg-[#F5D76E]" />
+      <span className="absolute left-[12%] top-[48%] h-1.5 w-1.5 rotate-45 bg-[#94A3B8]" />
+      <span className="absolute right-[28%] top-[58%] h-2 w-2 rotate-45 bg-[#F4C6D7]" />
+      <span className="absolute left-[24%] top-[16%] h-px w-5 rotate-[30deg] bg-white/50" />
+      <span className="absolute right-[18%] top-[48%] h-px w-4 -rotate-[20deg] bg-white/40" />
+      <span className="absolute left-[14%] top-[36%] h-1 w-1 rounded-full bg-white/70" />
+      <span className="absolute right-[30%] top-[28%] h-1 w-1 rounded-full bg-white/60" />
+
+      <svg
+        viewBox="0 0 280 360"
+        className="absolute left-1/2 top-[18%] h-[58%] w-auto -translate-x-1/2"
+        aria-hidden
+      >
+        <ellipse cx="140" cy="300" rx="28" ry="10" fill="#1A2248" opacity="0.35" />
+        <path d="M118 268 L140 330 L162 268 Z" fill="#F4A261" />
+        <path d="M128 268 L140 312 L152 268 Z" fill="#E76F51" />
+        <path d="M140 42 C96 118 96 188 140 248 C184 188 184 118 140 42 Z" fill="#5B7CFF" />
+        <path d="M140 58 C112 122 112 186 140 234 C168 186 168 122 140 58 Z" fill="#7B93FF" />
+        <circle cx="140" cy="132" r="22" fill="#D6EEF7" />
+        <circle cx="140" cy="132" r="14" fill="#7EC8E3" />
+        <circle cx="134" cy="126" r="5" fill="white" opacity="0.7" />
+        <path d="M96 188 L70 230 L118 214 Z" fill="#635BFF" />
+        <path d="M184 188 L210 230 L162 214 Z" fill="#8B83FF" />
+        <rect x="132" y="248" width="16" height="18" rx="3" fill="#3D4A7A" />
+      </svg>
+
+      <svg
+        className="absolute inset-x-0 bottom-0 h-[28%] w-full"
+        viewBox="0 0 600 180"
+        preserveAspectRatio="none"
+        aria-hidden
+      >
+        <path
+          fill="white"
+          d="M0 110 C80 70 140 150 220 100 C300 50 360 140 450 90 C520 55 560 80 600 70 L600 180 L0 180 Z"
+        />
+        <path
+          fill="white"
+          opacity="0.9"
+          d="M0 130 C90 100 160 160 250 120 C340 80 400 150 500 115 C560 95 580 110 600 108 L600 180 L0 180 Z"
+        />
+      </svg>
+    </div>
+  );
+}
 
 export function AuthLayout({
   eyebrow,
@@ -18,91 +98,93 @@ export function AuthLayout({
   children: ReactNode;
 }) {
   return (
-    <main className="grid min-h-full lg:grid-cols-2">
-      <section className="relative hidden overflow-hidden bg-sidebar px-10 py-12 text-sidebar-foreground lg:flex lg:flex-col lg:justify-between">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -left-24 -top-24 h-80 w-80 rounded-full bg-primary/30 blur-3xl" />
-          <div className="absolute bottom-0 right-0 h-72 w-72 rounded-full bg-indigo-400/20 blur-3xl" />
-          <div
-            className="absolute inset-0 opacity-[0.08]"
-            style={{
-              backgroundImage:
-                "linear-gradient(to right, #fff 1px, transparent 1px), linear-gradient(to bottom, #fff 1px, transparent 1px)",
-              backgroundSize: "48px 48px",
-            }}
-          />
-        </div>
-        <div className="relative">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-xs font-semibold text-white">
+    <div className="min-h-full bg-[#F6F4EF] text-[#172033]">
+      <header className="border-b border-[#E7E2D9]/80">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-8">
+          <Link href="/" className="flex items-center gap-2.5">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-[#635BFF] text-[10px] font-semibold tracking-wide text-white">
               TPT
-            </div>
-            <p className="text-sm font-semibold tracking-tight text-white">
+            </span>
+            <span className="text-sm font-semibold tracking-tight">
               Task Planner and Tracker
-            </p>
-          </div>
-          <p className="mt-16 text-xs font-medium uppercase tracking-[0.18em] text-indigo-200">
-            {eyebrow ?? "Workspaces"}
-          </p>
-          <h1 className="mt-3 max-w-md text-4xl font-semibold tracking-tight text-white">
-            {panelTitle}
-          </h1>
-          {panelDescription ? (
-            <p className="mt-4 max-w-md text-sm leading-6 text-slate-300">
-              {panelDescription}
-            </p>
-          ) : null}
+            </span>
+          </Link>
+          <Link
+            href="/"
+            className="text-sm text-[#6B6358] transition-colors hover:text-[#172033]"
+          >
+            Back to home
+          </Link>
         </div>
-        <ul className="relative space-y-3 text-sm text-slate-300">
-          {HIGHLIGHTS.map((item) => (
-            <li key={item} className="flex gap-3">
-              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-300" />
-              {item}
-            </li>
-          ))}
-        </ul>
-      </section>
-      <section className="flex items-center justify-center bg-background px-4 py-10 sm:px-8">
-        <div className="w-full max-w-[420px]">{children}</div>
-      </section>
-    </main>
+      </header>
+
+      <main className="grid min-h-[calc(100svh-4rem)] lg:grid-cols-2">
+        <section className="flex items-center justify-center px-5 py-12 sm:px-8">
+          <div className="w-full max-w-[400px]">{children}</div>
+        </section>
+
+        <aside className="relative hidden flex-col justify-between bg-[#0B1220] px-12 py-14 text-[#E8EDF5] lg:flex">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-[#9AA7B8]">
+              {eyebrow ?? "Workspaces"}
+            </p>
+            <h1
+              className={`${display.className} mt-5 max-w-md text-[2.75rem] leading-[1.05] text-white`}
+            >
+              {panelTitle}
+            </h1>
+            {panelDescription ? (
+              <p className="mt-5 max-w-sm text-[15px] leading-7 text-[#B7C2D0]">
+                {panelDescription}
+              </p>
+            ) : null}
+          </div>
+          <ul className="space-y-5 border-t border-white/10 pt-8">
+            {HIGHLIGHTS.map((item) => (
+              <li key={item.n} className="flex gap-4 text-sm leading-6">
+                <span className="tabular-nums text-[#7C8A9A]">{item.n}</span>
+                <span className="text-[#C5CED8]">{item.text}</span>
+              </li>
+            ))}
+          </ul>
+        </aside>
+      </main>
+    </div>
   );
 }
 
-export function AuthCard({ children }: { children: ReactNode }) {
+export function AuthCard({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <div className="rounded-xl border border-border bg-card p-6 shadow-[var(--shadow-soft)] sm:p-8">
+    <div
+      className={cn(
+        "rounded-2xl border border-[#E7E2D9] bg-white p-6 sm:p-8",
+        className,
+      )}
+    >
       {children}
     </div>
   );
 }
 
 export function AuthShowcase({
-  brand = "Task Planner and Tracker",
   children,
 }: {
   brand?: string;
   children: ReactNode;
 }) {
   return (
-    <main className="flex min-h-full items-center justify-center bg-[#d4e4f6] px-4 py-8 sm:px-6">
-      <div className="grid w-full max-w-[1100px] overflow-hidden rounded-[28px] border-[3px] border-[#1d3d6e] bg-white shadow-[0_28px_64px_rgba(29,61,110,0.14)] lg:min-h-[620px] lg:grid-cols-[minmax(300px,380px)_1fr]">
-        <section className="flex flex-col px-8 py-10 sm:px-12 sm:py-12">
-          <p className="text-[17px] font-bold tracking-tight text-[#111827]">
-            {brand}
-          </p>
-          <div className="flex flex-1 flex-col justify-center pt-12 lg:pt-6">
-            {children}
-          </div>
-        </section>
-        <section className="relative hidden bg-[#f4f7fc] lg:block">
-          <img
-            src="/login-hero.jpg"
-            alt=""
-            className="absolute inset-0 h-full w-full object-contain p-6"
-          />
-        </section>
-      </div>
-    </main>
+    <AuthLayout
+      eyebrow="Welcome back"
+      panelTitle="See the day. Finish the work."
+      panelDescription="Sign in to the workspace you left — tasks, meetings, and projects stay put."
+    >
+      {children}
+    </AuthLayout>
   );
 }

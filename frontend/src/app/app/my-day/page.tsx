@@ -2,13 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { CalendarPlus, Check, MoreHorizontal, Plus } from "lucide-react";
+import { CalendarPlus, Check, ChevronDown, MoreHorizontal, Plus } from "lucide-react";
 import { EmptyState, PageShell } from "@/components/page-header";
 import { MemberAvatarGroup } from "@/components/member-avatar-group";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StatusBadge } from "@/components/ui/badge";
-import { Meter } from "@/features/insights/ui";
 import { useMyDay } from "@/features/insights/hooks";
 import { useCurrentUser } from "@/features/auth/hooks";
 import { useStartTask } from "@/features/tasks/hooks";
@@ -22,15 +20,6 @@ function greeting(name: string) {
   const hello =
     hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   return `${hello}, ${name}`;
-}
-
-function todayLabel(value = new Date()) {
-  return value.toLocaleDateString(undefined, {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
 }
 
 function canStartTask(status: string) {
@@ -48,7 +37,11 @@ function dueTime(task: InsightTask) {
 
 function meetingPlace(meeting: InsightMeeting) {
   if (meeting.mode === "ONLINE" || meeting.meetingLink) return "Online";
-  return "Offline";
+  return meeting.location?.trim() || "In person";
+}
+
+function priorityLabel(value: string) {
+  return value.replaceAll("_", " ").toLowerCase();
 }
 
 function TaskMenu({ task }: { task: InsightTask }) {
@@ -75,27 +68,25 @@ function TaskMenu({ task }: { task: InsightTask }) {
 
   return (
     <div className="relative" ref={ref}>
-      <Button
+      <button
         type="button"
-        size="icon"
-        variant="ghost"
         aria-label={`Actions for ${task.title}`}
         aria-expanded={open}
         aria-haspopup="menu"
         onClick={() => setOpen((value) => !value)}
-        className="h-8 w-8 text-[#64748B]"
+        className="flex h-7 w-7 items-center justify-center rounded-md text-[#94A3B8] opacity-0 transition-opacity hover:bg-[#F8FAFC] hover:text-[#172033] group-hover:opacity-100 focus-visible:opacity-100"
       >
         <MoreHorizontal className="h-4 w-4" />
-      </Button>
+      </button>
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 z-20 mt-1 w-40 overflow-hidden rounded-xl border border-[#E5E7EB] bg-white py-1 shadow-[0_8px_24px_rgba(15,23,42,0.08)]"
+          className="absolute right-0 z-20 mt-1 w-40 overflow-hidden rounded-lg border border-[#E5E7EB] bg-white py-1 shadow-[0_8px_24px_rgba(15,23,42,0.08)]"
         >
           <Link
             role="menuitem"
             href={`/app/tasks/${task.id}`}
-            className="block px-3 py-2 text-sm text-[#172033] hover:bg-[#F8FAFC]"
+            className="block px-3 py-1.5 text-[13px] text-[#172033] hover:bg-[#F8FAFC]"
             onClick={() => setOpen(false)}
           >
             Open task
@@ -104,7 +95,7 @@ function TaskMenu({ task }: { task: InsightTask }) {
             <button
               type="button"
               role="menuitem"
-              className="block w-full px-3 py-2 text-left text-sm text-[#172033] hover:bg-[#F8FAFC]"
+              className="block w-full px-3 py-1.5 text-left text-[13px] text-[#172033] hover:bg-[#F8FAFC]"
               disabled={start.isPending}
               onClick={() => {
                 setOpen(false);
@@ -118,7 +109,7 @@ function TaskMenu({ task }: { task: InsightTask }) {
             <Link
               role="menuitem"
               href={`/app/projects/${task.project.id}`}
-              className="block px-3 py-2 text-sm text-[#172033] hover:bg-[#F8FAFC]"
+              className="block px-3 py-1.5 text-[13px] text-[#172033] hover:bg-[#F8FAFC]"
               onClick={() => setOpen(false)}
             >
               View project
@@ -135,18 +126,18 @@ function TaskStatusControl({ task }: { task: InsightTask }) {
   const startable = canStartTask(task.status);
   const done = task.status === "COMPLETED";
   const className = cn(
-    "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+    "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
     done
       ? "border-primary bg-primary text-white"
       : startable
         ? "border-[#CBD5E1] bg-white hover:border-primary"
-        : "border-primary bg-primary/15 text-primary",
+        : "border-primary bg-primary/10",
   );
 
   if (done) {
     return (
       <span aria-label={`${task.title} completed`} className={className}>
-        <Check className="h-3 w-3" />
+        <Check className="h-2.5 w-2.5" strokeWidth={3} />
       </span>
     );
   }
@@ -158,6 +149,7 @@ function TaskStatusControl({ task }: { task: InsightTask }) {
         aria-label={`Open ${task.title}`}
         className={className}
       >
+        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
         <span className="sr-only">Open task</span>
       </Link>
     );
@@ -191,115 +183,149 @@ function TaskRow({
   return (
     <div
       className={cn(
-        "flex items-start gap-3 px-4 py-3",
-        tone === "completed" && "opacity-60",
+        "group flex items-center gap-3 px-4 py-2.5",
+        tone === "overdue" && "bg-[#FEF2F2]/60",
+        tone === "completed" && "opacity-55",
       )}
     >
       <TaskStatusControl task={task} />
       <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2">
           <Link
             href={`/app/tasks/${task.id}`}
             className={cn(
-              "font-medium text-[#172033] hover:text-primary",
+              "truncate text-[13px] font-medium text-[#172033] hover:text-primary",
               tone === "completed" && "text-[#64748B] line-through",
             )}
           >
             {task.title}
           </Link>
-          {tone === "completed" ? null : <TaskMenu task={task} />}
         </div>
-        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[#64748B]">
+        <p className="mt-0.5 truncate text-[12px] text-[#64748B]">
           {tone === "overdue" ? (
-            <span className="font-medium text-[#EF4444]">Overdue</span>
+            <span className="text-[#EF4444]">
+              Overdue
+              {task.dueDate ? ` · ${formatDate(task.dueDate)}` : ""}
+            </span>
           ) : null}
-          <span>{task.project?.name ?? "No project"}</span>
-          <StatusBadge value={task.priority} />
-          {tone === "overdue" ? (
-            <span>{formatDate(task.dueDate)}</span>
-          ) : time ? (
-            <span>{time}</span>
-          ) : null}
-          {people.length ? <MemberAvatarGroup people={people} limit={3} /> : null}
-        </div>
+          {tone === "overdue" ? " · " : null}
+          {task.project?.name ?? "No project"}
+          {task.priority ? ` · ${priorityLabel(task.priority)}` : ""}
+        </p>
       </div>
+      <div className="hidden shrink-0 items-center gap-3 sm:flex">
+        {tone !== "overdue" && time ? (
+          <span className="text-[12px] tabular-nums text-[#64748B]">{time}</span>
+        ) : null}
+        {people.length ? <MemberAvatarGroup people={people} limit={2} /> : null}
+      </div>
+      {tone === "completed" ? null : <TaskMenu task={task} />}
     </div>
   );
 }
 
-function TaskGroup({
+function TaskSection({
   title,
   count,
-  empty,
   children,
   collapsible = false,
 }: {
   title: string;
   count: number;
-  empty?: string;
   children: ReactNode;
   collapsible?: boolean;
 }) {
-  const [open, setOpen] = useState(!collapsible || count <= 4);
-  if (count === 0 && !empty) return null;
+  const [open, setOpen] = useState(!collapsible);
+  if (count === 0) return null;
+
+  const heading = (
+    <div className="flex items-center gap-2 px-4 py-2">
+      {collapsible ? (
+        <ChevronDown
+          className={cn(
+            "h-3.5 w-3.5 text-[#94A3B8] transition-transform",
+            !open && "-rotate-90",
+          )}
+        />
+      ) : null}
+      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#94A3B8]">
+        {title}
+      </span>
+      <span className="text-[11px] tabular-nums text-[#CBD5E1]">{count}</span>
+    </div>
+  );
 
   return (
-    <section>
-      <div className="flex items-center justify-between gap-3 px-1 pb-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-          {title}
-          <span className="ml-2 font-medium text-[#94A3B8]">{count}</span>
-        </h3>
-        {collapsible && count > 4 ? (
-          <button
-            type="button"
-            className="text-xs font-medium text-primary hover:underline"
-            onClick={() => setOpen((value) => !value)}
-          >
-            {open ? "Hide" : "Show"}
-          </button>
-        ) : null}
-      </div>
-      {count === 0 ? (
-        <p className="px-1 text-sm text-[#64748B]">{empty}</p>
-      ) : open ? (
-        <div className="divide-y divide-[#E5E7EB] overflow-hidden rounded-xl border border-[#E5E7EB] bg-white">
-          {children}
-        </div>
+    <div>
+      {collapsible ? (
+        <button
+          type="button"
+          className="flex w-full items-center text-left"
+          onClick={() => setOpen((value) => !value)}
+        >
+          {heading}
+        </button>
       ) : (
-        <p className="px-1 text-sm text-[#64748B]">{count} completed tasks hidden.</p>
+        heading
       )}
-    </section>
+      {open ? <div className="divide-y divide-[#F1F5F9]">{children}</div> : null}
+    </div>
   );
 }
 
-function MeetingRow({ meeting }: { meeting: InsightMeeting }) {
+function MeetingRow({
+  meeting,
+  last,
+}: {
+  meeting: InsightMeeting;
+  last: boolean;
+}) {
   const context = meeting.project?.name ?? meeting.team?.name ?? null;
   const online = meetingPlace(meeting) === "Online";
 
   return (
-    <div className="flex items-start gap-3 py-3">
-      <p className="w-14 shrink-0 pt-0.5 text-sm font-semibold text-[#172033]">
-        {formatTime(meeting.startAt)}
-      </p>
+    <div className="relative flex gap-3 pb-5 last:pb-0">
+      {!last ? (
+        <span className="absolute left-[3px] top-4 h-[calc(100%-8px)] w-px bg-[#E5E7EB]" />
+      ) : null}
+      <span className="relative mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
       <div className="min-w-0 flex-1">
-        <p className="truncate font-medium text-[#172033]">{meeting.title}</p>
-        <p className="mt-0.5 text-xs text-[#64748B]">
-          {context ? `${context} · ` : ""}
-          {meetingPlace(meeting)}
-        </p>
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-[12px] font-medium tabular-nums text-[#64748B]">
+              {formatTime(meeting.startAt)}
+              {meeting.endAt ? ` – ${formatTime(meeting.endAt)}` : ""}
+            </p>
+            <Link
+              href={`/app/meetings/${meeting.id}`}
+              className="mt-0.5 block truncate text-[13px] font-medium text-[#172033] hover:text-primary"
+            >
+              {meeting.title}
+            </Link>
+            <p className="mt-0.5 truncate text-[12px] text-[#64748B]">
+              {context ? `${context} · ` : ""}
+              {meetingPlace(meeting)}
+            </p>
+          </div>
+          {online && meeting.meetingLink ? (
+            <a
+              href={meeting.meetingLink}
+              target="_blank"
+              rel="noreferrer"
+              className="shrink-0 pt-0.5 text-[12px] font-medium text-primary hover:underline"
+            >
+              Join
+            </a>
+          ) : (
+            <Link
+              href={`/app/meetings/${meeting.id}`}
+              className="shrink-0 pt-0.5 text-[12px] font-medium text-[#64748B] hover:text-primary"
+            >
+              View
+            </Link>
+          )}
+        </div>
       </div>
-      {online && meeting.meetingLink ? (
-        <Button asChild size="sm">
-          <a href={meeting.meetingLink} target="_blank" rel="noreferrer">
-            Join
-          </a>
-        </Button>
-      ) : (
-        <Button asChild size="sm" variant="outline">
-          <Link href={`/app/meetings/${meeting.id}`}>View</Link>
-        </Button>
-      )}
     </div>
   );
 }
@@ -312,6 +338,7 @@ export default function MyDayPage() {
   const openTaskCreate = useUiStore((state) => state.openTaskCreate);
   const setOpenCreateDialog = useUiStore((state) => state.setOpenCreateDialog);
   const firstName = user.data?.name?.split(" ")[0] ?? "there";
+  const now = new Date();
 
   const groups = useMemo(() => {
     const overdue = myDay.data?.overdueTasks?.items ?? [];
@@ -323,119 +350,140 @@ export default function MyDayPage() {
     return { overdue, today, completed };
   }, [myDay.data]);
 
+  const meetings = myDay.data?.meetings.items ?? [];
   const openCount = groups.overdue.length + groups.today.length;
   const totalCount = openCount + groups.completed.length;
-  const completedCount = groups.completed.length;
-  const progress = totalCount ? Math.round((completedCount / totalCount) * 100) : 0;
   const hasWork = totalCount > 0;
 
-  const actions = (
-    <div className="flex flex-wrap items-center gap-2">
-      <Button size="sm" onClick={() => openTaskCreate()}>
-        <Plus className="h-4 w-4" />
-        Add Task
-      </Button>
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={() => setOpenCreateDialog("meeting")}
-      >
-        <CalendarPlus className="h-4 w-4" />
-        Schedule Meeting
-      </Button>
-    </div>
-  );
-
   return (
-    <PageShell className="max-w-5xl space-y-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 space-y-1">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#64748B]">
-            {todayLabel()}
-          </p>
-          <h1 className="text-2xl font-semibold tracking-tight text-[#172033]">
-            My Day
-          </h1>
-          <p className="text-sm text-[#64748B]">{greeting(firstName)}</p>
-          <div className="max-w-xs pt-2">
-            <p className="text-sm font-medium text-[#172033]">
-              {completedCount} of {totalCount} tasks completed
+    <PageShell className="max-w-[1080px] space-y-6">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-4">
+          <div className="flex h-[72px] w-[64px] shrink-0 flex-col items-center justify-center rounded-[12px] border border-[#E5E7EB] bg-white">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">
+              {now.toLocaleDateString(undefined, { month: "short" })}
+            </span>
+            <span className="text-[28px] font-semibold leading-none tracking-[-0.04em] text-[#172033]">
+              {now.getDate()}
+            </span>
+          </div>
+          <div className="min-w-0">
+            <p className="text-[12px] font-medium text-[#64748B]">
+              {now.toLocaleDateString(undefined, {
+                weekday: "long",
+                year: "numeric",
+              })}
             </p>
-            <Meter className="mt-2 h-1.5" value={progress} />
+            <h1 className="font-heading mt-0.5 truncate text-[26px] font-extrabold leading-[1.2] tracking-[-0.03em] text-[#172033] sm:text-[30px]">
+              {greeting(firstName)}
+            </h1>
+            <p className="mt-1 text-[15px] font-normal leading-[1.5] text-[#64748B]">
+              <span className="tabular-nums text-[#172033]">{openCount}</span>{" "}
+              open
+              {groups.overdue.length ? (
+                <>
+                  {" · "}
+                  <span className="tabular-nums text-[#EF4444]">
+                    {groups.overdue.length}
+                  </span>{" "}
+                  overdue
+                </>
+              ) : null}
+              {" · "}
+              <span className="tabular-nums text-[#172033]">
+                {meetings.length}
+              </span>{" "}
+              {meetings.length === 1 ? "meeting" : "meetings"}
+            </p>
           </div>
         </div>
-        {actions}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setOpenCreateDialog("meeting")}
+          >
+            <CalendarPlus className="h-4 w-4" />
+            Meeting
+          </Button>
+          <Button size="sm" onClick={() => openTaskCreate()}>
+            <Plus className="h-4 w-4" />
+            Task
+          </Button>
+        </div>
       </header>
 
       {myDay.isLoading ? (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(240px,300px)]">
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-40 w-full" />
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+          <Skeleton className="h-72 w-full rounded-[12px]" />
+          <Skeleton className="h-56 w-full rounded-[12px]" />
         </div>
       ) : myDay.isError ? (
         <p className="text-sm text-destructive">{myDay.error.message}</p>
       ) : !myDay.data ? (
         <EmptyState title="Unable to load My Day" />
       ) : (
-        <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(240px,300px)]">
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-base font-semibold text-[#172033]">
-                Today&apos;s tasks
-              </h2>
-              <p className="mt-0.5 text-sm text-[#64748B]">
-                What you need to do today.
-              </p>
-            </div>
-
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+          <section className="overflow-hidden rounded-[12px] border border-[#E5E7EB] bg-white">
             {!hasWork ? (
-              <EmptyState
-                title="Nothing planned for today"
-                description="You're all caught up. Enjoy your day!"
-                action={
-                  <Button size="sm" onClick={() => openTaskCreate()}>
-                    <Plus className="h-4 w-4" />
-                    Add Task
-                  </Button>
-                }
-              />
+              <div className="px-4">
+                <EmptyState
+                  title="Clear day"
+                  description="Nothing is assigned for today."
+                  action={
+                    <Button size="sm" onClick={() => openTaskCreate()}>
+                      <Plus className="h-4 w-4" />
+                      Add a task
+                    </Button>
+                  }
+                />
+              </div>
             ) : (
-              <div className="space-y-6">
-                <TaskGroup title="Overdue" count={groups.overdue.length}>
+              <div className="divide-y divide-[#E5E7EB]">
+                <TaskSection title="Overdue" count={groups.overdue.length}>
                   {groups.overdue.map((task) => (
                     <TaskRow key={task.id} task={task} tone="overdue" />
                   ))}
-                </TaskGroup>
-                <TaskGroup title="Today" count={groups.today.length}>
+                </TaskSection>
+                <TaskSection title="Today" count={groups.today.length}>
                   {groups.today.map((task) => (
                     <TaskRow key={task.id} task={task} tone="today" />
                   ))}
-                </TaskGroup>
-                <TaskGroup
-                  title="Completed"
+                </TaskSection>
+                <TaskSection
+                  title="Done"
                   count={groups.completed.length}
                   collapsible
                 >
                   {groups.completed.map((task) => (
                     <TaskRow key={task.id} task={task} tone="completed" />
                   ))}
-                </TaskGroup>
+                </TaskSection>
               </div>
             )}
-          </div>
+          </section>
 
-          <aside className="rounded-xl border border-[#E5E7EB] bg-white px-4 py-4">
-            <h2 className="text-sm font-semibold text-[#172033]">
-              Today&apos;s schedule
-            </h2>
-            {myDay.data.meetings.total === 0 ? (
-              <p className="mt-3 text-sm text-[#64748B]">
-                You&apos;re free today — no meetings scheduled.
+          <aside className="rounded-[12px] border border-[#E5E7EB] bg-white p-4">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-[13px] font-semibold text-[#172033]">
+                Schedule
+              </h2>
+              <span className="text-[12px] tabular-nums text-[#94A3B8]">
+                {meetings.length}
+              </span>
+            </div>
+            {meetings.length === 0 ? (
+              <p className="mt-6 text-[13px] leading-5 text-[#64748B]">
+                No meetings on the calendar.
               </p>
             ) : (
-              <div className="mt-1 divide-y divide-[#E5E7EB]">
-                {myDay.data.meetings.items.map((meeting) => (
-                  <MeetingRow key={meeting.id} meeting={meeting} />
+              <div className="mt-4">
+                {meetings.map((meeting, index) => (
+                  <MeetingRow
+                    key={meeting.id}
+                    meeting={meeting}
+                    last={index === meetings.length - 1}
+                  />
                 ))}
               </div>
             )}

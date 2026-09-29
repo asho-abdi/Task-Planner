@@ -26,20 +26,18 @@ export function TeamCard({
   onRole: (userId: string, role: "ADMIN" | "MEMBER") => void;
 }) {
   return (
-    <Surface>
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent text-lg">
+    <Surface className="p-0 sm:p-0">
+      <div className="flex items-start justify-between gap-3 px-4 py-3.5">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#EEF2FF] text-[12px] font-semibold text-primary">
             {team.icon || team.name.slice(0, 1).toUpperCase()}
           </span>
-          <div>
-            <h2 className="font-semibold">{team.name}</h2>
+          <div className="min-w-0">
+            <h2 className="text-[13px] font-medium text-[#172033]">{team.name}</h2>
             {team.description ? (
-              <p className="mt-1 text-sm text-muted-foreground">
-                {team.description}
-              </p>
+              <p className="mt-0.5 text-[12px] text-[#64748B]">{team.description}</p>
             ) : null}
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="mt-1 text-[12px] text-[#64748B]">
               {team._count.members} members · {team.activeTaskCount} active tasks
             </p>
           </div>
@@ -54,7 +52,7 @@ export function TeamCard({
       />
       {canAdmin ? (
         <form
-          className="mt-3 flex gap-2"
+          className="flex gap-2 border-t border-[#E5E7EB] px-4 py-3"
           onSubmit={(event) => {
             event.preventDefault();
             onAdd();
@@ -93,11 +91,11 @@ export function TeamMembers({
   onRole: (userId: string, role: "ADMIN" | "MEMBER") => void;
 }) {
   return (
-    <ul className="mt-4 space-y-1 text-sm">
+    <ul className="border-t border-[#E5E7EB] text-sm">
       {team.members.map((member) => (
         <li
           key={member.id}
-          className="flex items-center justify-between gap-2 rounded-lg px-1 py-1"
+          className="flex items-center justify-between gap-2 px-4 py-2"
         >
           <span>
             {member.user.name}

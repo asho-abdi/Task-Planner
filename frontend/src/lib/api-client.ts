@@ -48,21 +48,27 @@ async function refreshAccessToken(): Promise<string | null> {
   return refreshInFlight;
 }
 
-export async function apiRequest<T>(
+export async function authorizedFetch(
   path: string,
   options: RequestOptions = {},
-): Promise<T> {
+): Promise<Response> {
   const response = await send(path, options);
 
   if (response.status === 401 && !options.skipAuth) {
     const token = await refreshAccessToken();
     if (token) {
-      const retry = await send(path, options);
-      return parseResponse<T>(retry);
+      return send(path, options);
     }
   }
 
-  return parseResponse<T>(response);
+  return response;
+}
+
+export async function apiRequest<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<T> {
+  return parseResponse<T>(await authorizedFetch(path, options));
 }
 
 async function send(path: string, options: RequestOptions) {

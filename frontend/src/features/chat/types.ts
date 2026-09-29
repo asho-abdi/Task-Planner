@@ -94,12 +94,4 @@ export type ActivityEvent = {
   actor: ChatPerson | null;
 };
 
-export function activityHref(entityType: string | null, entityId: string | null) {
-  if (!entityId) return null;
-  if (entityType === "task") return `/app/tasks/${entityId}`;
-  if (entityType === "project") return `/app/projects/${entityId}`;
-  if (entityType === "meeting") return `/app/meetings/${entityId}`;
-  if (entityType === "conversation") return `/app/chat?c=${entityId}`;
-  if (entityType === "file") return "/app/files";
-  return null;
-}
+export { entityHref as activityHref } from "@/features/collaboration/api";

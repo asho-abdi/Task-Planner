@@ -61,11 +61,7 @@ import { AiPlanDialog } from "@/features/ai/ui";
 import { useWorkspaceStore } from "@/store/workspace-store";
 import { useMeetings } from "@/features/meetings/hooks";
 import { MeetingCard, TeamCalendar } from "@/features/meetings/meeting-ui";
-import {
-  ProjectMilestonesPanel,
-  ProjectNotesPanel,
-  ProjectTimelinePanel,
-} from "@/features/projects/project-planning";
+import { ProjectNotesPanel } from "@/features/projects/project-planning";
 
 const PROJECT_ROLES = ["OWNER", "MANAGER", "MEMBER", "VIEWER"] as const;
 const BOARD_COLUMNS = [
@@ -453,12 +449,6 @@ function ProjectDetail({
       ) : null}
 
       {tab === "board" ? <ProjectBoard tasks={taskItems} /> : null}
-
-      {tab === "timeline" ? <ProjectTimelinePanel projectId={projectId} /> : null}
-
-      {tab === "milestones" ? (
-        <ProjectMilestonesPanel projectId={projectId} canWrite={canWrite} />
-      ) : null}
 
       {tab === "files" ? (
         <ProjectFiles

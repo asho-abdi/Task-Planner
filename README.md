@@ -1,17 +1,13 @@
 # Task Planner and Tracker
 
-Multi-workspace Task Management / AI Work Platform.
-
-This repository currently contains the **project foundation**: NestJS API, Next.js app, Prisma schema for users/workspaces, authentication, and health checks. Domain features are not implemented yet.
-
-## Architecture
+Multi-workspace task management and collaboration platform.
 
 ```
 Browser → Next.js → NestJS API → PostgreSQL
-                               → Redis
+                               → Redis (optional)
 ```
 
-See [docs/architecture.md](docs/architecture.md) for module boundaries, auth, and workspace authorization.
+See [docs/architecture.md](docs/architecture.md) for module boundaries, auth, and workspace authorization. See [docs/system-problems.md](docs/system-problems.md) for the current issue audit.
 
 ## Prerequisites
 
@@ -67,6 +63,7 @@ Backend:
 - `npm run build` — compile
 - `npx prisma migrate dev` — apply migrations
 - `npm run lint` — ESLint
+- `npm test` — unit tests
 
 Frontend:
 

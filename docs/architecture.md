@@ -1,6 +1,6 @@
 # Architecture
 
-The platform is a multi-workspace collaboration system. This document describes the **foundation** only. Domain features (tasks, projects, meetings, AI, automations, and so on) are reserved as NestJS modules and will be implemented in later steps.
+The platform is a multi-workspace collaboration system. NestJS is the only backend API. The Next.js app is UI only.
 
 ## Runtime topology
 
@@ -9,10 +9,10 @@ Browser
   └── Next.js (App Router UI)
         └── NestJS API  (/api/v1)
               ├── PostgreSQL (Prisma)
-              └── Redis (cache, later BullMQ / Socket.IO scale-out)
+              └── Redis (optional: cache, Socket.IO scale-out, jobs)
 ```
 
-There is **one backend**: NestJS. The Next.js app does not expose a second API. The browser calls NestJS directly with CORS credentials so the httpOnly refresh cookie can be set by the API origin.
+The browser calls NestJS directly with CORS credentials so the httpOnly refresh cookie can be set by the API origin.
 
 ## Backend
 
@@ -20,10 +20,12 @@ NestJS modules are domain-based. Controllers stay thin; services own business ru
 
 | Module | Status |
 | --- | --- |
-| `auth`, `users`, `workspaces` | Implemented (foundation) |
+| `auth`, `users`, `workspaces` | Implemented |
 | `health`, `prisma`, `redis`, `config`, `common` | Implemented |
-| `teams`, `projects`, `tasks`, `meetings`, `todos` | Scaffold only |
-| `notifications`, `reports`, `goals`, `automations`, `ai`, `files` | Scaffold only |
+| `teams`, `projects`, `tasks`, `meetings`, `todos` | Implemented |
+| `notifications`, `reports`, `goals`, `files`, `pages`, `chat` | Implemented |
+| `activity`, `ai`, `automations` | Implemented (AI needs a provider key; automations currently notify) |
+| `realtime` | Implemented (Socket.IO) |
 
 ### Request pipeline
 
@@ -41,16 +43,10 @@ Refresh tokens are JWTs stored in an httpOnly cookie (`refresh_token`, path `/ap
 
 ## Frontend
 
-Feature folders map to domains (`features/auth`, `features/workspaces`). Shared UI lives in `components/ui` (shadcn/ui). Server state uses TanStack Query (`staleTime: 60s`). UI/workspace selection uses Zustand.
+Feature folders map to domains (`features/auth`, `features/workspaces`, `features/tasks`, …). Shared UI lives in `components/ui`. Server state uses TanStack Query. UI/workspace selection uses Zustand.
 
-### Progressive create dialogs
+Creation dialogs open immediately. Async dropdowns hydrate when queries resolve.
 
-Creation UIs such as **New Workspace** (and later New Task / Project / Meeting / Todo) open immediately. The dialog does not wait for network. Async fields render skeletons and hydrate when queries resolve. Cached query data makes those fields ready instantly.
+## Known issues
 
-## Database (this step)
-
-UUID primary keys, `createdAt` / `updatedAt`:
-
-- `User`
-- `Workspace`
-- `WorkspaceMember` (unique `[workspaceId, userId]`, role enum)
+See [system-problems.md](./system-problems.md) for the latest audit, fixes, and remaining product limits.

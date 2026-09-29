@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { EmptyState, PageHeader, PageShell } from "@/components/page-header";
+import { EmptyState, ListPanel, PageHeader, PageShell } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -86,7 +86,7 @@ export default function FilesPage() {
     <PageShell>
       <PageHeader
         title="Files"
-        description="Workspace files attached to tasks, projects, meetings, pages, and chat."
+        description="Attached across tasks, projects, meetings, and chat."
         actions={
           canWrite ? (
             <label className="inline-flex">
@@ -99,7 +99,7 @@ export default function FilesPage() {
                   event.target.value = "";
                 }}
               />
-              <Button asChild>
+              <Button asChild size="sm">
                 <span>{upload.isPending ? "Uploading…" : "Upload"}</span>
               </Button>
             </label>
@@ -114,94 +114,96 @@ export default function FilesPage() {
       ) : files.isError ? (
         <p className="text-sm text-destructive">{files.error.message}</p>
       ) : !files.data?.length ? (
-        <EmptyState title="No files yet" />
+        <EmptyState title="No files yet" description="Upload a file to this workspace." />
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Size</TableHead>
-              <TableHead>Uploader</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead>Attached to</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {files.data.map((file) => (
-              <TableRow key={file.id}>
-                <TableCell className="font-medium">{file.originalName}</TableCell>
-                <TableCell>{fileType(file)}</TableCell>
-                <TableCell>{formatSize(file.sizeBytes)}</TableCell>
-                <TableCell>{file.uploadedBy?.name ?? "—"}</TableCell>
-                <TableCell>{formatDate(file.createdAt)}</TableCell>
-                <TableCell>{attachedTo(file)}</TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={async () => {
-                        const url = await previewFileUrl(file.id);
-                        setPreview({
-                          id: file.id,
-                          name: file.originalName,
-                          url,
-                          mime: file.mimeType,
-                        });
-                      }}
-                    >
-                      Preview
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => void downloadFile(file.id, file.originalName)}
-                    >
-                      Download
-                    </Button>
-                    {canWrite ? (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setRenaming(file);
-                            setName(file.originalName);
-                          }}
-                        >
-                          Rename
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setMoving(file)}
-                        >
-                          Move
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={async () => {
-                            await deleteFile(file.id);
-                            if (workspaceId) {
-                              void queryClient.invalidateQueries({
-                                queryKey: ["files", workspaceId],
-                              });
-                            }
-                          }}
-                        >
-                          Delete
-                        </Button>
-                      </>
-                    ) : null}
-                  </div>
-                </TableCell>
+        <ListPanel>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Size</TableHead>
+                <TableHead>Uploader</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Attached to</TableHead>
+                <TableHead className="text-right"> </TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {files.data.map((file) => (
+                <TableRow key={file.id}>
+                  <TableCell className="font-medium">{file.originalName}</TableCell>
+                  <TableCell className="text-[#64748B]">{fileType(file)}</TableCell>
+                  <TableCell className="text-[#64748B]">{formatSize(file.sizeBytes)}</TableCell>
+                  <TableCell className="text-[#64748B]">{file.uploadedBy?.name ?? "—"}</TableCell>
+                  <TableCell className="text-[#64748B]">{formatDate(file.createdAt)}</TableCell>
+                  <TableCell className="text-[#64748B]">{attachedTo(file)}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap justify-end gap-x-3 gap-y-1 text-[12px]">
+                      <button
+                        type="button"
+                        className="text-[#64748B] hover:text-primary"
+                        onClick={async () => {
+                          const url = await previewFileUrl(file.id);
+                          setPreview({
+                            id: file.id,
+                            name: file.originalName,
+                            url,
+                            mime: file.mimeType,
+                          });
+                        }}
+                      >
+                        Preview
+                      </button>
+                      <button
+                        type="button"
+                        className="text-[#64748B] hover:text-primary"
+                        onClick={() => void downloadFile(file.id, file.originalName)}
+                      >
+                        Download
+                      </button>
+                      {canWrite ? (
+                        <>
+                          <button
+                            type="button"
+                            className="text-[#64748B] hover:text-primary"
+                            onClick={() => {
+                              setRenaming(file);
+                              setName(file.originalName);
+                            }}
+                          >
+                            Rename
+                          </button>
+                          <button
+                            type="button"
+                            className="text-[#64748B] hover:text-primary"
+                            onClick={() => setMoving(file)}
+                          >
+                            Move
+                          </button>
+                          <button
+                            type="button"
+                            className="text-[#EF4444] hover:underline"
+                            onClick={async () => {
+                              await deleteFile(file.id);
+                              if (workspaceId) {
+                                void queryClient.invalidateQueries({
+                                  queryKey: ["files", workspaceId],
+                                });
+                              }
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </>
+                      ) : null}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </ListPanel>
       )}
 
       <Dialog

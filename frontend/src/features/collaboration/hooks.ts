@@ -25,6 +25,8 @@ export const collabKeys = {
   assignments: (workspaceId: string, projectId: string) =>
     ["assignments", workspaceId, projectId] as const,
   users: ["platform-users"] as const,
+  automations: (workspaceId: string) =>
+    ["automations", workspaceId] as const,
 };
 
 export function useNotifications(workspaceId: string | null) {
@@ -443,5 +445,84 @@ export function usePlatformUsers(enabled: boolean) {
     queryFn: api.listPlatformUsers,
     enabled,
     staleTime: 60_000,
+  });
+}
+
+export function useDeletePage(pageId: string) {
+  const queryClient = useQueryClient();
+  const workspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
+  return useMutation({
+    mutationFn: () => api.deletePage(pageId),
+    onSuccess: () => {
+      if (workspaceId) {
+        void queryClient.invalidateQueries({
+          queryKey: collabKeys.pages(workspaceId),
+        });
+        void queryClient.removeQueries({
+          queryKey: collabKeys.page(workspaceId, pageId),
+        });
+      }
+    },
+  });
+}
+
+export function useAutomations(workspaceId: string | null) {
+  return useQuery({
+    queryKey: collabKeys.automations(workspaceId ?? "none"),
+    queryFn: api.listAutomations,
+    enabled: Boolean(workspaceId),
+    staleTime: 30_000,
+  });
+}
+
+export function useCreateAutomation() {
+  const queryClient = useQueryClient();
+  const workspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
+  return useMutation({
+    mutationFn: api.createAutomation,
+    onSuccess: () => {
+      if (workspaceId) {
+        void queryClient.invalidateQueries({
+          queryKey: collabKeys.automations(workspaceId),
+        });
+      }
+    },
+  });
+}
+
+export function useUpdateAutomation() {
+  const queryClient = useQueryClient();
+  const workspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
+  return useMutation({
+    mutationFn: ({
+      automationId,
+      ...input
+    }: {
+      automationId: string;
+      name?: string;
+      enabled?: boolean;
+    }) => api.updateAutomation(automationId, input),
+    onSuccess: () => {
+      if (workspaceId) {
+        void queryClient.invalidateQueries({
+          queryKey: collabKeys.automations(workspaceId),
+        });
+      }
+    },
+  });
+}
+
+export function useDeleteAutomation() {
+  const queryClient = useQueryClient();
+  const workspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
+  return useMutation({
+    mutationFn: api.deleteAutomation,
+    onSuccess: () => {
+      if (workspaceId) {
+        void queryClient.invalidateQueries({
+          queryKey: collabKeys.automations(workspaceId),
+        });
+      }
+    },
   });
 }

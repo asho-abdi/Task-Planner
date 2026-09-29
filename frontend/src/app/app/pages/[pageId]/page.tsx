@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { usePage, useUpdatePage } from "@/features/collaboration/hooks";
-import { deletePage } from "@/features/collaboration/api";
+import { usePage, useUpdatePage, useDeletePage } from "@/features/collaboration/hooks";
 import { useCurrentWorkspace } from "@/features/workspaces/hooks";
 import { nativeTextareaClass } from "@/lib/utils";
 import { useWorkspaceStore } from "@/store/workspace-store";
@@ -54,6 +53,7 @@ function PageEditor({
   canWrite: boolean;
 }) {
   const updatePage = useUpdatePage(page.id);
+  const removePage = useDeletePage(page.id);
   const router = useRouter();
   const [title, setTitle] = useState(page.title);
   const [body, setBody] = useState(page.body);
@@ -102,7 +102,7 @@ function PageEditor({
               variant="destructive"
               onClick={async () => {
                 if (!window.confirm("Delete this page?")) return;
-                await deletePage(page.id);
+                await removePage.mutateAsync();
                 router.push("/app/pages");
               }}
             >

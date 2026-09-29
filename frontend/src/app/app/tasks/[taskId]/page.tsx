@@ -222,14 +222,14 @@ function TaskDetail({
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#64748B]">
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.10em] text-[#64748B]">
               Task
             </p>
             <div className="mt-1.5 flex items-start gap-2.5">
               <span className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-primary">
                 <CheckSquare className="h-4 w-4" />
               </span>
-              <h1 className="text-[28px] font-semibold leading-tight tracking-tight text-[#172033]">
+              <h1 className="font-heading text-[26px] font-extrabold leading-[1.2] tracking-[-0.03em] text-[#172033] sm:text-[30px]">
                 {task.title}
               </h1>
             </div>

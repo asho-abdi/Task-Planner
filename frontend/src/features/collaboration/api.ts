@@ -1,6 +1,4 @@
-import { apiRequest } from "@/lib/api-client";
-import { env } from "@/lib/env";
-import { getAccessToken, getCurrentWorkspaceId } from "@/lib/session";
+import { apiRequest, authorizedFetch } from "@/lib/api-client";
 import type {
   InboxNotification,
   NotificationList,
@@ -101,17 +99,11 @@ export function uploadFile(file: File, attach: FileAttach = {}) {
 }
 
 async function fetchFileBlob(fileId: string, mode: "download" | "preview") {
-  const headers = new Headers();
-  const token = getAccessToken();
-  const workspaceId = getCurrentWorkspaceId();
-  if (token) headers.set("Authorization", `Bearer ${token}`);
-  if (workspaceId) headers.set("x-workspace-id", workspaceId);
-  const response = await fetch(`${env.apiUrl}/files/${fileId}/${mode}`, {
-    headers,
-    credentials: "include",
-  });
+  const response = await authorizedFetch(`/files/${fileId}/${mode}`);
   if (!response.ok) {
-    throw new Error(mode === "preview" ? "Unable to preview file" : "Unable to download file");
+    throw new Error(
+      mode === "preview" ? "Unable to preview file" : "Unable to download file",
+    );
   }
   return response.blob();
 }
@@ -200,23 +192,26 @@ export function reactToComment(taskId: string, commentId: string, emoji: string)
   );
 }
 
+export function entityHref(
+  entityType: string | null | undefined,
+  entityId: string | null | undefined,
+): string | null {
+  if (entityType === "file") return "/app/files";
+  if (entityType === "team") return "/app/teams";
+  if (entityType === "invitation") return "/app/settings#members";
+  if (!entityId) return null;
+  if (entityType === "task") return `/app/tasks/${entityId}`;
+  if (entityType === "project") return `/app/projects/${entityId}`;
+  if (entityType === "meeting") return `/app/meetings/${entityId}`;
+  if (entityType === "conversation") return `/app/chat?c=${entityId}`;
+  if (entityType === "goal") return `/app/goals/${entityId}`;
+  if (entityType === "todo") return `/app/todos/${entityId}`;
+  if (entityType === "page") return `/app/pages/${entityId}`;
+  return null;
+}
+
 export function notificationHref(item: InboxNotification) {
-  if (item.entityType === "task" && item.entityId) {
-    return `/app/tasks/${item.entityId}`;
-  }
-  if (item.entityType === "project" && item.entityId) {
-    return `/app/projects/${item.entityId}`;
-  }
-  if (item.entityType === "meeting" && item.entityId) {
-    return `/app/meetings/${item.entityId}`;
-  }
-  if (item.entityType === "conversation" && item.entityId) {
-    return `/app/chat?c=${item.entityId}`;
-  }
-  if (item.entityType === "file") {
-    return "/app/files";
-  }
-  return "/app/notifications";
+  return entityHref(item.entityType, item.entityId) ?? "/app/notifications";
 }
 
 export function listSubtasks(taskId: string) {
@@ -339,6 +334,44 @@ export function planDay(date?: string) {
 
 export function listPlatformUsers() {
   return apiRequest<PlatformUser[]>("/users");
+}
+
+export type WorkspaceAutomation = {
+  id: string;
+  name: string;
+  trigger: string;
+  action: string;
+  enabled: boolean;
+  createdAt: string;
+};
+
+export function listAutomations() {
+  return apiRequest<WorkspaceAutomation[]>("/automations");
+}
+
+export function createAutomation(input: {
+  name: string;
+  trigger: string;
+  action: string;
+}) {
+  return apiRequest<WorkspaceAutomation>("/automations", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateAutomation(
+  automationId: string,
+  input: { name?: string; enabled?: boolean },
+) {
+  return apiRequest<WorkspaceAutomation>(`/automations/${automationId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteAutomation(automationId: string) {
+  return apiRequest<void>(`/automations/${automationId}`, { method: "DELETE" });
 }
 
 export type { InboxNotification };

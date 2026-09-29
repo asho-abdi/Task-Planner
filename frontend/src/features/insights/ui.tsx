@@ -15,9 +15,11 @@ export function StatCard({
 }) {
   return (
     <div className="rounded-xl border border-border bg-card p-5 shadow-[var(--shadow-soft)]">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="mt-2 text-2xl font-semibold tracking-tight">{value}</p>
-      {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
+      <p className="text-[12px] font-medium text-muted-foreground">{label}</p>
+      <p className="font-heading mt-2 text-[26px] font-extrabold leading-[1.15] tracking-[-0.03em]">
+        {value}
+      </p>
+      {hint ? <p className="mt-1 text-[12px] font-medium text-muted-foreground">{hint}</p> : null}
     </div>
   );
 }
@@ -59,8 +61,8 @@ export function InsightSection({
   return (
     <section className="space-y-3">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-base font-semibold tracking-tight">{title}</h2>
-        <p className="text-sm text-muted-foreground">{total}</p>
+        <h2 className="text-[15px] font-bold tracking-[-0.02em]">{title}</h2>
+        <p className="text-[13px] font-medium text-muted-foreground">{total}</p>
       </div>
       {total === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-card px-5 py-8 text-sm text-muted-foreground">
@@ -102,6 +104,175 @@ export function InsightRow({
       </div>
       {aside ? <StatusBadge value={aside} /> : null}
     </Link>
+  );
+}
+
+export function KpiCard({
+  label,
+  value,
+  hint,
+  icon,
+  change,
+}: {
+  label: string;
+  value: string | number;
+  hint?: string;
+  icon?: ReactNode;
+  change?: { percent: number; up: boolean } | null;
+}) {
+  return (
+    <div className="rounded-[12px] border border-[#E5E7EB] bg-white p-4">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-[12px] font-medium text-[#64748B]">{label}</p>
+        {icon ? (
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F8FAFC] text-primary">
+            {icon}
+          </span>
+        ) : null}
+      </div>
+      <p className="font-heading mt-2 text-[26px] font-extrabold leading-[1.15] tracking-[-0.03em] text-[#172033]">
+        {value}
+      </p>
+      <div className="mt-1 flex items-center gap-2">
+        {change ? (
+          <span
+            className={cn(
+              "text-[12px] font-medium",
+              change.up ? "text-[#16A34A]" : "text-[#EF4444]",
+            )}
+          >
+            {change.up ? "↑" : "↓"} {change.percent}%
+          </span>
+        ) : null}
+        {hint ? (
+          <span className="text-[12px] text-[#94A3B8]">{hint}</span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+export function DonutChart({
+  total,
+  slices,
+}: {
+  total: number;
+  slices: Array<{ label: string; count: number; color: string }>;
+}) {
+  const r = 54;
+  const c = 2 * Math.PI * r;
+  let offset = 0;
+  const visible = slices.filter((slice) => slice.count > 0);
+  return (
+    <div className="relative mx-auto h-44 w-44">
+      <svg viewBox="0 0 140 140" className="-rotate-90">
+        <circle
+          cx="70"
+          cy="70"
+          r={r}
+          fill="none"
+          stroke="#EEF2F6"
+          strokeWidth="16"
+        />
+        {visible.map((slice) => {
+          const len = total ? (slice.count / total) * c : 0;
+          const circle = (
+            <circle
+              key={slice.label}
+              cx="70"
+              cy="70"
+              r={r}
+              fill="none"
+              stroke={slice.color}
+              strokeWidth="16"
+              strokeDasharray={`${len} ${c - len}`}
+              strokeDashoffset={-offset}
+            />
+          );
+          offset += len;
+          return circle;
+        })}
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <p className="text-[22px] font-semibold tracking-tight text-[#172033]">
+          {total}
+        </p>
+        <p className="text-[11px] text-[#94A3B8]">tasks</p>
+      </div>
+    </div>
+  );
+}
+
+export function TrendChart({
+  labels,
+  series,
+}: {
+  labels: string[];
+  series: Array<{ label: string; values: number[]; color: string }>;
+}) {
+  const width = 640;
+  const height = 220;
+  const pad = { l: 28, r: 12, t: 16, b: 28 };
+  const max = Math.max(1, ...series.flatMap((item) => item.values));
+  const innerW = width - pad.l - pad.r;
+  const innerH = height - pad.t - pad.b;
+  const x = (index: number) =>
+    pad.l +
+    (labels.length <= 1 ? innerW / 2 : (index / (labels.length - 1)) * innerW);
+  const y = (value: number) => pad.t + innerH - (value / max) * innerH;
+  const path = (values: number[]) =>
+    values
+      .map(
+        (value, index) =>
+          `${index === 0 ? "M" : "L"} ${x(index)} ${y(value)}`,
+      )
+      .join(" ");
+  const area = (values: number[]) => {
+    if (!values.length) return "";
+    return `${path(values)} L ${x(values.length - 1)} ${pad.t + innerH} L ${x(0)} ${pad.t + innerH} Z`;
+  };
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} className="h-52 w-full">
+      {[0.25, 0.5, 0.75, 1].map((tick) => (
+        <line
+          key={tick}
+          x1={pad.l}
+          x2={width - pad.r}
+          y1={y(max * tick)}
+          y2={y(max * tick)}
+          stroke="#E5E7EB"
+          strokeDasharray="4 6"
+        />
+      ))}
+      {series.map((item) => (
+        <g key={item.label}>
+          <path d={area(item.values)} fill={item.color} opacity="0.08" />
+          <path
+            d={path(item.values)}
+            fill="none"
+            stroke={item.color}
+            strokeWidth="2.5"
+            strokeLinecap="round"
+          />
+        </g>
+      ))}
+      {labels.map((label, index) =>
+        index === 0 ||
+        index === labels.length - 1 ||
+        index === Math.floor(labels.length / 2) ? (
+          <text
+            key={`${label}-${index}`}
+            x={x(index)}
+            y={height - 8}
+            textAnchor="middle"
+            className="fill-[#94A3B8] text-[11px]"
+          >
+            {label}
+          </text>
+        ) : null,
+      )}
+    </svg>
   );
 }
 
