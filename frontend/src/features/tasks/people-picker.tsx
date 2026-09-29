@@ -2,11 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, Users, X } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Avatar } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Team } from "@/features/collaboration/types";
-import { workloadGlyph } from "@/features/insights/ui";
 import type { WorkloadUser } from "@/features/insights/types";
 import { cn } from "@/lib/utils";
 
@@ -50,6 +49,7 @@ export function PeoplePicker({
   const [open, setOpen] = useState(false);
   const [teamIds, setTeamIds] = useState<string[]>([]);
   const rootRef = useRef<HTMLDivElement>(null);
+  const inputId = `people-${label.toLowerCase().replace(/\s+/g, "-")}`;
   const loadByUser = new Map(
     (workloadUsers ?? []).map((user) => [user.userId, user]),
   );
@@ -129,40 +129,59 @@ export function PeoplePicker({
     onChange(selectedIds.filter((id) => !ids.has(id)));
   }
 
+  const hasChips = activeTeams.length > 0 || personChips.length > 0;
+
   return (
     <div className="space-y-2" ref={rootRef}>
-      <Label>{label}</Label>
-      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+      <div className="space-y-1">
+        <Label htmlFor={inputId}>{label}</Label>
+        {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+      </div>
       {loading ? (
-        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-9 w-full" />
       ) : (
-        <div className="rounded-xl border border-border bg-card px-2.5 py-2">
-          <div className="flex flex-wrap gap-1.5">
-            {activeTeams.map((team) => (
-              <Chip
-                key={`team-${team.id}`}
-                label={`${team.name} · ${teamMemberIds(team).length}`}
-                disabled={disabled}
-                onRemove={() => removeTeam(team)}
-              />
-            ))}
-            {personChips.map((id) => (
-              <Chip
-                key={id}
-                label={peopleById.get(id)?.name ?? "Member"}
-                disabled={disabled}
-                onRemove={() => removePerson(id)}
-              />
-            ))}
-          </div>
-          <div className="relative mt-1.5">
-            <Search className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
+        <div
+          className={cn(
+            "rounded-md border border-input bg-card shadow-xs transition-[border-color,box-shadow] duration-150 focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20",
+            disabled && "opacity-60",
+          )}
+        >
+          {hasChips ? (
+            <div className="flex flex-wrap gap-1.5 px-2 pt-2">
+              {activeTeams.map((team) => (
+                <Chip
+                  key={`team-${team.id}`}
+                  label={`${team.name} · ${teamMemberIds(team).length}`}
+                  team
+                  disabled={disabled}
+                  onRemove={() => removeTeam(team)}
+                />
+              ))}
+              {personChips.map((id) => (
+                <Chip
+                  key={id}
+                  label={peopleById.get(id)?.name ?? "Member"}
+                  disabled={disabled}
+                  onRemove={() => removePerson(id)}
+                />
+              ))}
+            </div>
+          ) : null}
+          <div className="relative">
+            <Search
+              aria-hidden
+              className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-subtle-foreground"
+            />
+            <input
+              id={inputId}
               value={query}
               disabled={disabled}
               placeholder={placeholder}
               autoComplete="off"
-              className="h-9 border-0 bg-transparent pl-8 shadow-none focus-visible:ring-0"
+              role="combobox"
+              aria-expanded={open}
+              aria-controls={`${inputId}-list`}
+              className="h-9 w-full rounded-md bg-transparent pl-8 pr-3 text-base text-foreground placeholder:text-subtle-foreground focus:outline-none disabled:cursor-not-allowed"
               onFocus={() => setOpen(true)}
               onChange={(event) => {
                 setQuery(event.target.value);
@@ -181,24 +200,32 @@ export function PeoplePicker({
             />
           </div>
           {open ? (
-            <div className="mt-2 max-h-56 overflow-y-auto rounded-lg border border-border">
+            <div
+              id={`${inputId}-list`}
+              role="listbox"
+              className="max-h-56 overflow-y-auto border-t border-border p-1 animate-fade-in"
+            >
               {teamHits.length ? (
-                <div className="p-1">
-                  <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <div>
+                  <p className="px-2 pb-1 pt-1.5 text-2xs font-medium uppercase tracking-wide text-subtle-foreground">
                     Teams
                   </p>
                   {teamHits.map((team) => (
                     <button
                       key={team.id}
                       type="button"
-                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+                      role="option"
+                      aria-selected={false}
+                      className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-base transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
                       onClick={() => addTeam(team)}
                     >
-                      <Users className="h-4 w-4 text-primary" />
-                      <span className="min-w-0 flex-1 truncate font-medium">
+                      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary-soft-foreground">
+                        <Users className="size-3.5" />
+                      </span>
+                      <span className="min-w-0 flex-1 truncate font-medium text-foreground">
                         {team.name}
                       </span>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-muted-foreground tabular">
                         {teamMemberIds(team).length} people
                       </span>
                     </button>
@@ -206,8 +233,8 @@ export function PeoplePicker({
                 </div>
               ) : null}
               {peopleHits.length ? (
-                <div className="p-1">
-                  <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <div>
+                  <p className="px-2 pb-1 pt-1.5 text-2xs font-medium uppercase tracking-wide text-subtle-foreground">
                     People
                   </p>
                   {peopleHits.map((person) => {
@@ -219,22 +246,43 @@ export function PeoplePicker({
                       <button
                         key={person.userId}
                         type="button"
-                        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+                        role="option"
+                        aria-selected={false}
+                        className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-base transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:outline-none"
                         onClick={() => addPerson(person.userId)}
                       >
-                        <span className="min-w-0 flex-1 truncate">
+                        <Avatar name={person.name} size="sm" />
+                        <span className="min-w-0 flex-1 truncate text-foreground">
                           {person.name}
                         </span>
                         {percent != null ? (
                           <span
-                            className={cn(
-                              "font-mono text-xs",
-                              load?.overloaded
-                                ? "text-danger"
-                                : "text-muted-foreground",
-                            )}
+                            className="flex items-center gap-1.5"
+                            title={`${percent}% of capacity${load?.overloaded ? " · overloaded" : ""}`}
                           >
-                            {workloadGlyph(percent)} {percent}%
+                            <span className="h-1.5 w-12 overflow-hidden rounded-full bg-muted">
+                              <span
+                                className={cn(
+                                  "block h-full rounded-full",
+                                  load?.overloaded
+                                    ? "bg-danger"
+                                    : percent >= 80
+                                      ? "bg-warning"
+                                      : "bg-success",
+                                )}
+                                style={{ width: `${percent}%` }}
+                              />
+                            </span>
+                            <span
+                              className={cn(
+                                "w-9 text-right text-xs tabular",
+                                load?.overloaded
+                                  ? "font-medium text-danger-soft-foreground"
+                                  : "text-muted-foreground",
+                              )}
+                            >
+                              {percent}%
+                            </span>
                           </span>
                         ) : null}
                       </button>
@@ -243,7 +291,7 @@ export function PeoplePicker({
                 </div>
               ) : null}
               {!teamHits.length && !peopleHits.length ? (
-                <p className="px-3 py-2 text-sm text-muted-foreground">
+                <p className="px-2 py-2 text-sm text-muted-foreground">
                   No matching people or teams.
                 </p>
               ) : null}
@@ -257,24 +305,33 @@ export function PeoplePicker({
 
 function Chip({
   label,
+  team,
   disabled,
   onRemove,
 }: {
   label: string;
+  team?: boolean;
   disabled?: boolean;
   onRemove: () => void;
 }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
-      {label}
+    <span className="inline-flex h-6 items-center gap-1.5 rounded-full border border-border bg-muted pl-0.5 pr-1 text-xs font-medium text-foreground">
+      {team ? (
+        <span className="flex size-5 items-center justify-center rounded-full bg-primary-soft text-primary-soft-foreground">
+          <Users className="size-3" />
+        </span>
+      ) : (
+        <Avatar name={label} size="xs" />
+      )}
+      <span className="max-w-40 truncate">{label}</span>
       <button
         type="button"
-        className="rounded-full p-0.5 text-muted-foreground hover:bg-card hover:text-foreground"
+        className="inline-flex size-4 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         disabled={disabled}
         onClick={onRemove}
         aria-label={`Remove ${label}`}
       >
-        <X className="h-3 w-3" />
+        <X className="size-3" />
       </button>
     </span>
   );

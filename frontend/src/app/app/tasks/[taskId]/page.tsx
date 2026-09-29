@@ -3,9 +3,32 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState, type FormEvent, type ReactNode } from "react";
-import { ArrowLeft, Calendar, CheckSquare, Flag, FolderKanban, User } from "lucide-react";
+import {
+  CalendarDays,
+  CalendarPlus,
+  CircleDot,
+  Clock,
+  Eye,
+  FileSearch,
+  Flag,
+  FolderKanban,
+  Globe,
+  Lock,
+  MoreHorizontal,
+  Paperclip,
+  Pencil,
+  Repeat,
+  Share2,
+  Target,
+  Trash2,
+  Upload,
+  Users,
+  Video,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/ui/badge";
+import { Badge, PriorityBadge, StatusBadge } from "@/components/ui/badge";
+import { Avatar, AvatarStack } from "@/components/ui/avatar";
+import { Breadcrumbs } from "@/components/ui/breadcrumb";
 import { PageShell } from "@/components/page-header";
 import {
   Card,
@@ -14,9 +37,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { EmptyState, ErrorState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/components/ui/toast";
+import { Tooltip } from "@/components/ui/tooltip";
 import { CreateResourceDialog } from "@/components/create-resource-dialog";
 import { useProjects, useProjectMilestones } from "@/features/projects/hooks";
 import {
@@ -30,10 +62,14 @@ import {
 import { ShareDialog } from "@/features/tasks/share-dialog";
 import { PeoplePicker } from "@/features/tasks/people-picker";
 import {
+  FileCard,
+  TaskActivityTimeline,
   TaskCommentsSection,
+  TaskNotices,
   TaskReviewPanel,
-  TaskWorkPanel,
+  TaskWorkActions,
 } from "@/features/tasks/task-workflow";
+import { ProjectChip, TaskDue, dueInfo } from "@/features/tasks/task-meta";
 import {
   PRIORITIES,
   type Priority,
@@ -45,8 +81,8 @@ import {
 } from "@/features/workspaces/hooks";
 import { useCurrentUser } from "@/features/auth/hooks";
 import { useFiles, useTeams, useUploadFile } from "@/features/collaboration/hooks";
-import { downloadFile } from "@/features/collaboration/api";
 import {
+  cn,
   formatDate,
   fromDateInputValue,
   nativeSelectClass,
@@ -55,8 +91,24 @@ import {
 } from "@/lib/utils";
 import { useWorkspaceStore } from "@/store/workspace-store";
 
-const workspaceCard =
-  "rounded-2xl border-border shadow-[0_1px_2px_rgba(15,23,42,0.04)]";
+const PRIORITY_LABELS: Record<string, string> = {
+  LOW: "Low",
+  MEDIUM: "Medium",
+  HIGH: "High",
+  URGENT: "Urgent",
+};
+
+const VISIBILITY_META = {
+  PRIVATE: { label: "Private", icon: Lock },
+  PROJECT: { label: "Project members", icon: FolderKanban },
+  WORKSPACE: { label: "Workspace", icon: Globe },
+} as const;
+
+const RECURRENCE_LABELS: Record<string, string> = {
+  DAILY: "Daily",
+  WEEKLY: "Weekly",
+  MONTHLY: "Monthly",
+};
 
 export default function TaskDetailPage() {
   const params = useParams<{ taskId: string }>();
@@ -68,19 +120,36 @@ export default function TaskDetailPage() {
   const currentUser = useCurrentUser();
 
   if (task.isLoading) {
-    return (
-      <div className="mx-auto max-w-6xl space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <Skeleton className="h-80 w-full" />
-          <Skeleton className="h-80 w-full" />
-        </div>
-      </div>
-    );
+    return <TaskDetailSkeleton />;
   }
 
   if (!task.data) {
-    return <p className="text-sm text-muted-foreground">Task not found.</p>;
+    return (
+      <PageShell width="wide">
+        <Breadcrumbs items={[{ label: "Tasks", href: "/app/tasks" }, { label: "Not found" }]} />
+        {task.isError ? (
+          <ErrorState
+            title="Couldn't load this task"
+            description={task.error.message}
+            action={
+              <Button variant="outline" size="sm" onClick={() => void task.refetch()}>
+                Retry
+              </Button>
+            }
+          />
+        ) : null}
+        <EmptyState
+          icon={FileSearch}
+          title="Task not found"
+          description="It may have been deleted, or you no longer have access."
+          action={
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/app/tasks">Back to tasks</Link>
+            </Button>
+          }
+        />
+      </PageShell>
+    );
   }
 
   return (
@@ -92,6 +161,54 @@ export default function TaskDetailPage() {
       members={members}
       dependencyOptions={dependencyOptions}
     />
+  );
+}
+
+function TaskDetailSkeleton() {
+  return (
+    <PageShell width="wide">
+      <div role="status" aria-label="Loading task" className="space-y-6">
+        <div className="space-y-3">
+          <Skeleton className="h-3.5 w-40" />
+          <div className="flex flex-col gap-4 lg:flex-row lg:justify-between">
+            <div className="space-y-3">
+              <Skeleton className="h-8 w-80 max-w-full" />
+              <div className="flex gap-2">
+                <Skeleton className="h-5 w-20 rounded-full" />
+                <Skeleton className="h-5 w-16 rounded-full" />
+                <Skeleton className="h-5 w-28 rounded-md" />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Skeleton className="h-9 w-28" />
+              <Skeleton className="h-9 w-20" />
+            </div>
+          </div>
+        </div>
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="space-y-6">
+            <div className="space-y-3 rounded-xl border border-border bg-card p-5">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-4/5" />
+            </div>
+            <div className="space-y-4 rounded-xl border border-border bg-card p-5">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-16 w-full rounded-lg" />
+              <Skeleton className="h-3 w-2/3" />
+            </div>
+          </div>
+          <div className="space-y-3 rounded-xl border border-border bg-card p-5">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <div key={index} className="flex items-center justify-between gap-4">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </PageShell>
   );
 }
 
@@ -134,9 +251,6 @@ function TaskDetail({
   const canEditDetails = Boolean(
     canWrite && (isAdmin || (task.assignedById === userId && !isAssignee)),
   );
-  const assigneeLabel = assignees.length
-    ? assignees.map((person) => person.name).join(", ")
-    : "Unassigned";
 
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description ?? "");
@@ -164,6 +278,8 @@ function TaskDetail({
     (task.watchers ?? []).map((person) => person.id),
   );
   const [shareOpen, setShareOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [peopleOpen, setPeopleOpen] = useState(false);
   const [recurrence, setRecurrence] = useState(task.recurrence ?? "");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const files = useFiles(task.workspaceId, { taskId: task.id });
@@ -182,190 +298,232 @@ function TaskDetail({
     canWrite,
     isAdmin,
   };
+  const memberOptions = (members.data ?? []).map((member) => ({
+    userId: member.userId,
+    name: member.user.name,
+  }));
+  const visibility = VISIBILITY_META[task.visibility ?? "WORKSPACE"];
+  const due = dueInfo(task.dueDate, task.status);
 
   async function save(event: FormEvent) {
     event.preventDefault();
-    await updateTask.mutateAsync({
-      title,
-      description: description.trim() || null,
-      priority,
-      dueDate: fromDateInputValue(dueDate) ?? null,
-      startDate: fromDateInputValue(startDate) ?? null,
-      estimatedHours: estimatedHours === "" ? null : Number(estimatedHours),
-      projectId: projectId || null,
-      dependsOnTaskIds,
-      blocksTaskIds,
-      milestoneId: milestoneId || null,
-      recurrence: recurrence ? (recurrence as "DAILY" | "WEEKLY" | "MONTHLY") : null,
-    });
+    try {
+      await updateTask.mutateAsync({
+        title,
+        description: description.trim() || null,
+        priority,
+        dueDate: fromDateInputValue(dueDate) ?? null,
+        startDate: fromDateInputValue(startDate) ?? null,
+        estimatedHours: estimatedHours === "" ? null : Number(estimatedHours),
+        projectId: projectId || null,
+        dependsOnTaskIds,
+        blocksTaskIds,
+        milestoneId: milestoneId || null,
+        recurrence: recurrence ? (recurrence as "DAILY" | "WEEKLY" | "MONTHLY") : null,
+      });
+      toast.success("Task updated");
+      setEditOpen(false);
+    } catch {
+      // Error is shown in the form and toasted globally.
+    }
   }
 
   async function handleReassign(event: FormEvent) {
     event.preventDefault();
-    await assignTask.mutateAsync({
-      assigneeIds,
-      collaboratorIds,
-      watcherIds,
-    });
+    try {
+      await assignTask.mutateAsync({
+        assigneeIds,
+        collaboratorIds,
+        watcherIds,
+      });
+      toast.success("People updated");
+      setPeopleOpen(false);
+    } catch {
+      // Error is shown in the form and toasted globally.
+    }
   }
 
-  return (
-    <PageShell>
-      <div className="space-y-6">
-        <Link
-          href="/app/tasks"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-primary"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back to Tasks
-        </Link>
+  const dependencyList = (selected: Array<{ id: string; title: string }>) =>
+    Array.from(
+      new Map(
+        [...selected, ...(dependencyOptions.data?.items ?? [])]
+          .filter((item) => item.id !== task.id)
+          .map((item) => [item.id, item]),
+      ).values(),
+    );
 
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <p className="text-[11px] font-extrabold uppercase tracking-[0.10em] text-muted-foreground">
-              Task
-            </p>
-            <div className="mt-1.5 flex items-start gap-2.5">
-              <span className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
-                <CheckSquare className="h-4 w-4" />
-              </span>
-              <h1 className="font-heading text-[26px] font-extrabold leading-[1.2] tracking-[-0.03em] text-foreground sm:text-[30px]">
-                {task.title}
-              </h1>
-            </div>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {task.project ? (
-                <Link
-                  href={`/app/projects/${task.project.id}`}
-                  className="hover:text-primary"
-                >
-                  {task.project.name}
-                </Link>
-              ) : (
-                "No project"
-              )}{" "}
-              · Assigned to {assigneeLabel}
-              {task.meeting ? (
-                <>
-                  {" "}
-                  · Created from Meeting{" "}
-                  <Link
-                    href={`/app/meetings/${task.meeting.id}`}
-                    className="hover:text-primary"
-                  >
-                    {task.meeting.title}
-                  </Link>
-                </>
+  return (
+    <PageShell width="wide">
+      <header className="space-y-3">
+        <Breadcrumbs
+          items={[
+            { label: "Tasks", href: "/app/tasks" },
+            { label: task.title },
+          ]}
+        />
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 space-y-3">
+            <h1 className="break-words font-heading text-2xl font-semibold leading-tight tracking-[-0.02em] text-foreground sm:text-3xl">
+              {task.title}
+            </h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusBadge value={task.status} />
+              <PriorityBadge value={task.priority} />
+              {task.project ? <ProjectChip project={task.project} link /> : null}
+              {task.dueDate ? (
+                <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+                  <CalendarDays className="size-3.5" aria-hidden />
+                  Due <TaskDue task={task} showIcon={false} />
+                </span>
               ) : null}
-            </p>
-            {task.blocked && (task.blockedBy ?? task.dependsOn)[0] ? (
-              <p className="mt-2 text-sm text-warning-soft-foreground">
-                🔒 Blocked by “{(task.blockedBy ?? task.dependsOn)[0].title}”
-              </p>
-            ) : null}
+              {task.blocked ? (
+                <Badge variant="warning">
+                  <Lock />
+                  Blocked
+                </Badge>
+              ) : null}
+              {task.meeting ? (
+                <Link
+                  href={`/app/meetings/${task.meeting.id}`}
+                  className="inline-flex items-center gap-1 rounded-sm text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Video className="size-3.5" aria-hidden />
+                  From meeting {task.meeting.title}
+                </Link>
+              ) : null}
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge value={task.status} />
-            <StatusBadge value={task.priority} />
+          <div className="flex shrink-0 flex-wrap items-center gap-2 lg:justify-end">
+            <TaskWorkActions {...workflowProps} />
+            {canEditDetails ? (
+              <Button variant="outline" onClick={() => setEditOpen(true)}>
+                <Pencil />
+                Edit
+              </Button>
+            ) : null}
             {canEditDetails ? (
               <Button variant="outline" onClick={() => setShareOpen(true)}>
+                <Share2 />
                 Share
               </Button>
             ) : null}
+            {canDelete ? (
+              <DropdownMenu>
+                <Tooltip content="More actions">
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon" aria-label="More actions">
+                      <MoreHorizontal />
+                    </Button>
+                  </DropdownMenuTrigger>
+                </Tooltip>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    variant="destructive"
+                    disabled={deleteTask.isPending}
+                    onSelect={() => setDeleteOpen(true)}
+                  >
+                    <Trash2 />
+                    Delete task
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(260px,320px)]">
-        <div className="space-y-6">
-          <Card className={workspaceCard}>
-            <CardHeader>
-              <CardTitle className="text-[18px]">Task Information</CardTitle>
-              <CardDescription>
-                Description and notes for this task.
-              </CardDescription>
+      <TaskNotices task={task} />
+
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="min-w-0 space-y-6">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle>Description</CardTitle>
+                {canEditDetails ? (
+                  <Button variant="ghost" size="xs" onClick={() => setEditOpen(true)}>
+                    <Pencil />
+                    Edit
+                  </Button>
+                ) : null}
+              </div>
             </CardHeader>
             <CardContent>
               {task.description ? (
-                <p className="text-sm leading-6 text-foreground">
+                <p className="whitespace-pre-line text-base leading-relaxed text-foreground">
                   {task.description}
                 </p>
               ) : (
-                <div className="rounded-xl border border-dashed border-border px-4 py-6 text-center">
-                  <p className="text-sm font-medium text-foreground">
-                    No description
-                  </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Add context from Task Details on the right.
-                  </p>
-                </div>
+                <p className="text-base text-subtle-foreground">
+                  No description yet.
+                  {canEditDetails ? " Use Edit to add context for the assignee." : ""}
+                </p>
               )}
             </CardContent>
           </Card>
 
           <TaskReviewPanel {...workflowProps} />
-          <TaskWorkPanel {...workflowProps} />
 
-          <Card className={workspaceCard}>
+          <Card>
             <CardHeader>
-              <CardTitle className="text-[18px]">Reference files</CardTitle>
-              <CardDescription>
-                Briefing attachments. Assignee uploads appear in Work Submission.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {referenceFiles.length ? (
-                <ul className="space-y-2">
-                  {referenceFiles.map((file) => (
-                    <li key={file.id}>
-                      <button
-                        type="button"
-                        className="flex w-full items-center justify-between rounded-xl border border-border px-3.5 py-2.5 text-left text-sm transition-colors hover:bg-muted"
-                        onClick={() =>
-                          void downloadFile(file.id, file.originalName)
-                        }
-                      >
-                        <span className="truncate font-medium">
-                          {file.originalName}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {Math.round(file.sizeBytes / 1024)} KB
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="rounded-xl border border-dashed border-border px-4 py-6 text-center">
-                  <p className="text-sm font-medium text-foreground">
-                    No reference files
-                  </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    No files have been attached to this task.
-                  </p>
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <CardTitle>Reference files</CardTitle>
+                  <CardDescription>
+                    Briefing attachments. Assignee uploads appear in Submissions.
+                  </CardDescription>
                 </div>
+                {canEditDetails ? (
+                  <label className="shrink-0">
+                    <input
+                      type="file"
+                      className="peer sr-only"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (file) {
+                          void upload
+                            .mutateAsync({
+                              file,
+                              attach: { taskId: task.id },
+                            })
+                            .then(() => toast.success("File uploaded"))
+                            .catch(() => undefined);
+                        }
+                        event.target.value = "";
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      asChild
+                      className="cursor-pointer peer-focus-visible:ring-2 peer-focus-visible:ring-ring"
+                    >
+                      <span>
+                        <Upload />
+                        {upload.isPending ? "Uploading…" : "Upload"}
+                      </span>
+                    </Button>
+                  </label>
+                ) : null}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {referenceFiles.length ? (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {referenceFiles.map((file) => (
+                    <FileCard key={file.id} file={file} />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState
+                  compact
+                  icon={Paperclip}
+                  title="No reference files"
+                  description="No files have been attached to this task."
+                  className="rounded-lg border border-dashed border-border py-6"
+                />
               )}
-              {canEditDetails ? (
-                <label className="inline-flex">
-                  <input
-                    type="file"
-                    className="sr-only"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      if (file) {
-                        void upload.mutateAsync({
-                          file,
-                          attach: { taskId: task.id },
-                        });
-                      }
-                      event.target.value = "";
-                    }}
-                  />
-                  <Button type="button" variant="outline" asChild>
-                    <span>{upload.isPending ? "Uploading…" : "Upload file"}</span>
-                  </Button>
-                </label>
-              ) : null}
             </CardContent>
           </Card>
 
@@ -377,407 +535,367 @@ function TaskDetail({
         </div>
 
         <aside className="space-y-6 lg:sticky lg:top-4">
-          <Card className={workspaceCard}>
-            <CardHeader>
-              <CardTitle className="text-[18px]">Task Details</CardTitle>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle>Properties</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 text-sm">
-              <MetaRow
-                icon={User}
-                label="Assignee"
-                value={
-                  (task.assigneeWork ?? []).length > 1 ? (
-                    <ul className="space-y-1">
+            <CardContent className="space-y-0.5 pb-3">
+              <PropRow icon={CircleDot} label="Status">
+                <span title="Updates from start, submit, and review">
+                  <StatusBadge value={task.status} />
+                </span>
+              </PropRow>
+              <PropRow icon={Flag} label="Priority">
+                <PriorityBadge value={task.priority} />
+              </PropRow>
+              <PropRow icon={FolderKanban} label="Project">
+                <ProjectChip project={task.project} link />
+              </PropRow>
+              {task.milestone ? (
+                <PropRow icon={Target} label="Milestone">
+                  <span className="truncate">{task.milestone.title}</span>
+                </PropRow>
+              ) : null}
+              <PropRow icon={CalendarDays} label="Start">
+                {task.startDate ? formatDate(task.startDate) : <Muted>Not set</Muted>}
+              </PropRow>
+              <PropRow icon={CalendarDays} label="Due">
+                {task.dueDate ? (
+                  <span
+                    className={cn(
+                      "tabular",
+                      due?.overdue && "font-medium text-danger-soft-foreground",
+                    )}
+                  >
+                    {formatDate(task.dueDate)}
+                    <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                      {due?.label}
+                    </span>
+                  </span>
+                ) : (
+                  <Muted>Not set</Muted>
+                )}
+              </PropRow>
+              <PropRow icon={Clock} label="Estimate">
+                {task.estimatedHours != null ? (
+                  <span className="tabular">{task.estimatedHours}h</span>
+                ) : (
+                  <Muted>Not set</Muted>
+                )}
+              </PropRow>
+              {task.recurrence ? (
+                <PropRow icon={Repeat} label="Repeats">
+                  {RECURRENCE_LABELS[task.recurrence] ?? task.recurrence}
+                </PropRow>
+              ) : null}
+              <PropRow icon={visibility.icon} label="Visibility">
+                <span className="flex items-center gap-2">
+                  {visibility.label}
+                  {canEditDetails ? (
+                    <button
+                      type="button"
+                      onClick={() => setShareOpen(true)}
+                      className="rounded-sm text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      Change
+                    </button>
+                  ) : null}
+                </span>
+              </PropRow>
+              <PropRow icon={CalendarPlus} label="Created">
+                {formatDate(task.createdAt)}
+              </PropRow>
+            </CardContent>
+            <div className="border-t border-border px-5 pb-4 pt-3">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-sm font-semibold text-foreground">People</p>
+                {canEditDetails ? (
+                  <Button variant="ghost" size="xs" onClick={() => setPeopleOpen(true)}>
+                    <Users />
+                    Manage
+                  </Button>
+                ) : null}
+              </div>
+              <div className="space-y-3">
+                <PeopleGroup label="Assignees">
+                  {(task.assigneeWork ?? []).length > 1 ? (
+                    <ul className="space-y-1.5">
                       {(task.assigneeWork ?? []).map((person) => (
                         <li
                           key={person.userId}
                           className="flex items-center justify-between gap-2"
                         >
-                          <span>{person.name}</span>
+                          <span className="flex min-w-0 items-center gap-2">
+                            <Avatar name={person.name} size="xs" />
+                            <span className="truncate text-sm text-foreground">
+                              {person.name}
+                            </span>
+                          </span>
                           <StatusBadge value={person.status} />
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    assigneeLabel
-                  )
-                }
-              />
-              <MetaRow
-                icon={User}
-                label="Collaborators"
-                value={
-                  (task.collaborators ?? []).length
-                    ? (task.collaborators ?? [])
-                        .map((person) => person.name)
-                        .join(", ")
-                    : "None"
-                }
-              />
-              <MetaRow
-                icon={User}
-                label="Watchers"
-                value={
-                  (task.watchers ?? []).length
-                    ? (task.watchers ?? []).map((person) => person.name).join(", ")
-                    : "None"
-                }
-              />
-              <MetaRow
-                icon={Flag}
-                label="Priority"
-                value={<StatusBadge value={task.priority} />}
-              />
-              <MetaRow
-                icon={CheckSquare}
-                label="Status"
-                value={
-                  <div>
-                    <StatusBadge value={task.status} />
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Updates from start, submit, and review
-                    </p>
-                  </div>
-                }
-              />
-              <MetaRow
-                icon={FolderKanban}
-                label="Project"
-                value={
-                  task.project ? (
-                    <Link
-                      href={`/app/projects/${task.project.id}`}
-                      className="hover:text-primary"
-                    >
-                      {task.project.name}
-                    </Link>
+                    <PersonList people={assignees} empty="Unassigned" />
+                  )}
+                </PeopleGroup>
+                <PeopleGroup label="Collaborators">
+                  <PersonList people={task.collaborators ?? []} empty="None" />
+                </PeopleGroup>
+                <PeopleGroup label="Watchers">
+                  {(task.watchers ?? []).length > 3 ? (
+                    <span title={(task.watchers ?? []).map((p) => p.name).join(", ")}>
+                      <AvatarStack people={task.watchers ?? []} max={6} size="xs" />
+                    </span>
                   ) : (
-                    "No project"
-                  )
-                }
-              />
-              <MetaRow
-                icon={Calendar}
-                label="Start date"
-                value={formatDate(task.startDate)}
-              />
-              <MetaRow
-                icon={Calendar}
-                label="Due date"
-                value={formatDate(task.dueDate)}
-              />
-              <MetaRow
-                icon={Calendar}
-                label="Created"
-                value={formatDate(task.createdAt)}
-              />
-            </CardContent>
+                    <PersonList people={task.watchers ?? []} empty="None" />
+                  )}
+                </PeopleGroup>
+              </div>
+            </div>
           </Card>
 
-          {canEditDetails ? (
-          <Card className={workspaceCard}>
-            <CardHeader>
-              <CardTitle className="text-[18px]">Edit details</CardTitle>
-              <CardDescription>
-                Status changes through start, submit, and approval.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form className="space-y-3" onSubmit={save}>
-                <div className="space-y-1.5">
-                  <Label htmlFor="title">Title</Label>
-                  <Input
-                    id="title"
-                    value={title}
-                    disabled={!canEditDetails}
-                    onChange={(event) => setTitle(event.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="description">Description</Label>
-                  <textarea
-                    id="description"
-                    className={nativeTextareaClass}
-                    value={description}
-                    disabled={!canEditDetails}
-                    onChange={(event) => setDescription(event.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="priority">Priority</Label>
-                  <select
-                    id="priority"
-                    className={nativeSelectClass}
-                    value={priority}
-                    disabled={!canEditDetails}
-                    onChange={(event) =>
-                      setPriority(event.target.value as Priority)
-                    }
-                  >
-                    {PRIORITIES.map((item) => (
-                      <option key={item} value={item}>
-                        {item}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="startDate">Start date</Label>
-                  <Input
-                    id="startDate"
-                    type="date"
-                    value={startDate}
-                    disabled={!canEditDetails}
-                    onChange={(event) => setStartDate(event.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="dueDate">Due date</Label>
-                  <Input
-                    id="dueDate"
-                    type="date"
-                    value={dueDate}
-                    disabled={!canEditDetails}
-                    onChange={(event) => setDueDate(event.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="estimatedHours">Estimated hours</Label>
-                  <Input
-                    id="estimatedHours"
-                    type="number"
-                    min={0}
-                    max={1000}
-                    step={0.25}
-                    value={estimatedHours}
-                    disabled={!canEditDetails}
-                    onChange={(event) => setEstimatedHours(event.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="recurrence">Recurrence</Label>
-                  <select
-                    id="recurrence"
-                    className={nativeSelectClass}
-                    value={recurrence}
-                    disabled={!canEditDetails}
-                    onChange={(event) => setRecurrence(event.target.value)}
-                  >
-                    <option value="">None</option>
-                    <option value="DAILY">Daily</option>
-                    <option value="WEEKLY">Weekly</option>
-                    <option value="MONTHLY">Monthly</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="project">Project</Label>
-                  {projects.isLoading ? (
-                    <Skeleton className="h-9 w-full" />
-                  ) : (
-                    <select
-                      id="project"
-                      className={nativeSelectClass}
-                      value={projectId}
-                      disabled={!canEditDetails}
-                      onChange={(event) => setProjectId(event.target.value)}
-                    >
-                      <option value="">No project</option>
-                      {(projects.data ?? []).map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.name}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Blocked by</Label>
-                  {dependencyOptions.isLoading ? (
-                    <Skeleton className="h-24 w-full" />
-                  ) : (
-                    <div className="max-h-40 space-y-2 overflow-y-auto rounded-xl border border-border p-3">
-                      {Array.from(
-                        new Map(
-                          [
-                            ...task.dependsOn,
-                            ...(dependencyOptions.data?.items ?? []),
-                          ]
-                            .filter((item) => item.id !== task.id)
-                            .map((item) => [item.id, item]),
-                        ).values(),
-                      ).map((item) => (
-                        <label
-                          key={item.id}
-                          className="flex items-center gap-2 text-sm"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={dependsOnTaskIds.includes(item.id)}
-                            disabled={!canEditDetails}
-                            onChange={(event) => {
-                              setDependsOnTaskIds((current) =>
-                                event.target.checked
-                                  ? [...current, item.id]
-                                  : current.filter((id) => id !== item.id),
-                              );
-                            }}
-                          />
-                          {item.title}
-                        </label>
-                      ))}
-                      {(dependencyOptions.data?.items ?? []).length === 0 &&
-                      task.dependsOn.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                          No other tasks loaded yet.
-                        </p>
-                      ) : null}
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Blocks</Label>
-                  {dependencyOptions.isLoading ? (
-                    <Skeleton className="h-24 w-full" />
-                  ) : (
-                    <div className="max-h-40 space-y-2 overflow-y-auto rounded-xl border border-border p-3">
-                      {Array.from(
-                        new Map(
-                          [
-                            ...(task.blocks ?? []),
-                            ...(dependencyOptions.data?.items ?? []),
-                          ]
-                            .filter((item) => item.id !== task.id)
-                            .map((item) => [item.id, item]),
-                        ).values(),
-                      ).map((item) => (
-                        <label
-                          key={item.id}
-                          className="flex items-center gap-2 text-sm"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={blocksTaskIds.includes(item.id)}
-                            disabled={!canEditDetails}
-                            onChange={(event) => {
-                              setBlocksTaskIds((current) =>
-                                event.target.checked
-                                  ? [...current, item.id]
-                                  : current.filter((id) => id !== item.id),
-                              );
-                            }}
-                          />
-                          {item.title}
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="milestone">Milestone</Label>
-                  <select
-                    id="milestone"
-                    className={nativeSelectClass}
-                    value={milestoneId}
-                    disabled={!canEditDetails || !projectId}
-                    onChange={(event) => setMilestoneId(event.target.value)}
-                  >
-                    <option value="">None</option>
-                    {(milestones.data ?? []).map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <Button type="submit" disabled={updateTask.isPending}>
-                  Save
-                </Button>
-                {updateTask.error ? (
-                  <p className="text-sm text-destructive">
-                    {updateTask.error.message}
-                  </p>
-                ) : null}
-              </form>
-            </CardContent>
-          </Card>
-          ) : null}
-
-          {canEditDetails ? (
-          <Card className={workspaceCard}>
-            <CardHeader>
-              <CardTitle className="text-[18px]">People</CardTitle>
-              <CardDescription>
-                Assignee completes the work. Collaborators help. Watchers get updates.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form className="space-y-4" onSubmit={handleReassign}>
-                <PeoplePicker
-                  label="Assignees"
-                  hint="Search people or teams. The first selected person is primary."
-                  people={(members.data ?? []).map((member) => ({
-                    userId: member.userId,
-                    name: member.user.name,
-                  }))}
-                  teams={teams.data ?? []}
-                  selectedIds={assigneeIds}
-                  onChange={setAssigneeIds}
-                  loading={members.isLoading || teams.isLoading}
-                  disabled={!canEditDetails}
-                />
-                <PeoplePicker
-                  label="Collaborators"
-                  people={(members.data ?? []).map((member) => ({
-                    userId: member.userId,
-                    name: member.user.name,
-                  }))}
-                  teams={teams.data ?? []}
-                  selectedIds={collaboratorIds}
-                  onChange={setCollaboratorIds}
-                  loading={members.isLoading || teams.isLoading}
-                  disabled={!canEditDetails}
-                />
-                <PeoplePicker
-                  label="Watchers"
-                  people={(members.data ?? []).map((member) => ({
-                    userId: member.userId,
-                    name: member.user.name,
-                  }))}
-                  teams={teams.data ?? []}
-                  selectedIds={watcherIds}
-                  onChange={setWatcherIds}
-                  loading={members.isLoading || teams.isLoading}
-                  disabled={!canEditDetails}
-                />
-                <Button
-                  type="submit"
-                  variant="outline"
-                  disabled={assignTask.isPending}
-                >
-                  Save people
-                </Button>
-              </form>
-              {assignTask.error ? (
-                <p className="mt-2 text-sm text-destructive">
-                  {assignTask.error.message}
-                </p>
-              ) : null}
-            </CardContent>
-          </Card>
-          ) : null}
-
-          {canDelete ? (
-            <Button
-              variant="destructive"
-              className="w-full"
-              onClick={() => setDeleteOpen(true)}
-              disabled={deleteTask.isPending}
-            >
-              Delete
-            </Button>
-          ) : null}
+          <TaskActivityTimeline task={task} />
         </aside>
       </div>
+
+      {canEditDetails ? (
+        <CreateResourceDialog
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          title="Edit task"
+          description="Status changes through start, submit, and approval."
+          className="max-w-2xl"
+        >
+          <form className="space-y-5" onSubmit={save}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  id="title"
+                  value={title}
+                  disabled={!canEditDetails}
+                  onChange={(event) => setTitle(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="description">Description</Label>
+                <textarea
+                  id="description"
+                  className={nativeTextareaClass}
+                  value={description}
+                  disabled={!canEditDetails}
+                  onChange={(event) => setDescription(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="priority">Priority</Label>
+                <select
+                  id="priority"
+                  className={nativeSelectClass}
+                  value={priority}
+                  disabled={!canEditDetails}
+                  onChange={(event) =>
+                    setPriority(event.target.value as Priority)
+                  }
+                >
+                  {PRIORITIES.map((item) => (
+                    <option key={item} value={item}>
+                      {PRIORITY_LABELS[item] ?? item}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="recurrence">Recurrence</Label>
+                <select
+                  id="recurrence"
+                  className={nativeSelectClass}
+                  value={recurrence}
+                  disabled={!canEditDetails}
+                  onChange={(event) => setRecurrence(event.target.value)}
+                >
+                  <option value="">None</option>
+                  <option value="DAILY">Daily</option>
+                  <option value="WEEKLY">Weekly</option>
+                  <option value="MONTHLY">Monthly</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="startDate">Start date</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={startDate}
+                  disabled={!canEditDetails}
+                  onChange={(event) => setStartDate(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dueDate">Due date</Label>
+                <Input
+                  id="dueDate"
+                  type="date"
+                  value={dueDate}
+                  disabled={!canEditDetails}
+                  onChange={(event) => setDueDate(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="estimatedHours">Estimated hours</Label>
+                <Input
+                  id="estimatedHours"
+                  type="number"
+                  min={0}
+                  max={1000}
+                  step={0.25}
+                  value={estimatedHours}
+                  disabled={!canEditDetails}
+                  onChange={(event) => setEstimatedHours(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="project">Project</Label>
+                {projects.isLoading ? (
+                  <Skeleton className="h-9 w-full" />
+                ) : (
+                  <select
+                    id="project"
+                    className={nativeSelectClass}
+                    value={projectId}
+                    disabled={!canEditDetails}
+                    onChange={(event) => setProjectId(event.target.value)}
+                  >
+                    <option value="">No project</option>
+                    {(projects.data ?? []).map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="milestone">Milestone</Label>
+                <select
+                  id="milestone"
+                  className={nativeSelectClass}
+                  value={milestoneId}
+                  disabled={!canEditDetails || !projectId}
+                  onChange={(event) => setMilestoneId(event.target.value)}
+                >
+                  <option value="">None</option>
+                  {(milestones.data ?? []).map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>Blocked by</Label>
+                {dependencyOptions.isLoading ? (
+                  <Skeleton className="h-32 w-full" />
+                ) : (
+                  <CheckList
+                    items={dependencyList(task.dependsOn)}
+                    selected={dependsOnTaskIds}
+                    disabled={!canEditDetails}
+                    onChange={setDependsOnTaskIds}
+                    empty={
+                      (dependencyOptions.data?.items ?? []).length === 0 &&
+                      task.dependsOn.length === 0
+                        ? "No other tasks loaded yet."
+                        : null
+                    }
+                  />
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>Blocks</Label>
+                {dependencyOptions.isLoading ? (
+                  <Skeleton className="h-32 w-full" />
+                ) : (
+                  <CheckList
+                    items={dependencyList(task.blocks ?? [])}
+                    selected={blocksTaskIds}
+                    disabled={!canEditDetails}
+                    onChange={setBlocksTaskIds}
+                    empty={null}
+                  />
+                )}
+              </div>
+            </div>
+            {updateTask.error ? (
+              <p className="text-sm text-danger-soft-foreground">
+                {updateTask.error.message}
+              </p>
+            ) : null}
+            <div className="flex justify-end gap-2 border-t border-border pt-4">
+              <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" loading={updateTask.isPending}>
+                Save changes
+              </Button>
+            </div>
+          </form>
+        </CreateResourceDialog>
+      ) : null}
+
+      {canEditDetails ? (
+        <CreateResourceDialog
+          open={peopleOpen}
+          onOpenChange={setPeopleOpen}
+          title="People"
+          description="Assignees complete the work. Collaborators help. Watchers get updates."
+          className="max-w-xl"
+        >
+          <form className="space-y-5" onSubmit={handleReassign}>
+            <PeoplePicker
+              label="Assignees"
+              hint="Search people or teams. The first selected person is primary."
+              people={memberOptions}
+              teams={teams.data ?? []}
+              selectedIds={assigneeIds}
+              onChange={setAssigneeIds}
+              loading={members.isLoading || teams.isLoading}
+              disabled={!canEditDetails}
+            />
+            <PeoplePicker
+              label="Collaborators"
+              people={memberOptions}
+              teams={teams.data ?? []}
+              selectedIds={collaboratorIds}
+              onChange={setCollaboratorIds}
+              loading={members.isLoading || teams.isLoading}
+              disabled={!canEditDetails}
+            />
+            <PeoplePicker
+              label="Watchers"
+              people={memberOptions}
+              teams={teams.data ?? []}
+              selectedIds={watcherIds}
+              onChange={setWatcherIds}
+              loading={members.isLoading || teams.isLoading}
+              disabled={!canEditDetails}
+            />
+            {assignTask.error ? (
+              <p className="text-sm text-danger-soft-foreground">
+                {assignTask.error.message}
+              </p>
+            ) : null}
+            <div className="flex justify-end gap-2 border-t border-border pt-4">
+              <Button type="button" variant="outline" onClick={() => setPeopleOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" loading={assignTask.isPending}>
+                Save people
+              </Button>
+            </div>
+          </form>
+        </CreateResourceDialog>
+      ) : null}
 
       <CreateResourceDialog
         open={deleteOpen}
@@ -796,14 +914,19 @@ function TaskDetail({
           <Button
             type="button"
             variant="destructive"
-            disabled={deleteTask.isPending}
+            loading={deleteTask.isPending}
             onClick={() => {
-              void deleteTask.mutateAsync(taskId).then(() => {
-                router.push("/app/tasks");
-              });
+              void deleteTask
+                .mutateAsync(taskId)
+                .then(() => {
+                  toast.success("Task deleted");
+                  router.push("/app/tasks");
+                })
+                .catch(() => undefined);
             }}
           >
-            {deleteTask.isPending ? "Deleting…" : "Delete task"}
+            <Trash2 />
+            Delete task
           </Button>
         </div>
       </CreateResourceDialog>
@@ -827,38 +950,117 @@ function TaskDetail({
             ? ""
             : `${window.location.origin}/app/tasks/${task.id}`
         }
-        onVisibility={(visibility) => {
-          void shareTask.setVisibility.mutateAsync(visibility);
+        onVisibility={(nextVisibility) => {
+          void shareTask.setVisibility
+            .mutateAsync(nextVisibility)
+            .then(() => toast.success("Visibility updated"))
+            .catch(() => undefined);
         }}
-        onShare={async (userId, permission) => {
-          await shareTask.share.mutateAsync({ userId, permission });
+        onShare={async (shareUserId, permission) => {
+          await shareTask.share.mutateAsync({ userId: shareUserId, permission });
+          toast.success("Task shared");
         }}
-        onUnshare={async (userId) => {
-          await shareTask.unshare.mutateAsync(userId);
+        onUnshare={async (shareUserId) => {
+          await shareTask.unshare.mutateAsync(shareUserId);
+          toast.success("Access removed");
         }}
+        sharing={shareTask.share.isPending}
       />
     </PageShell>
   );
 }
 
-function MetaRow({
+function Muted({ children }: { children: ReactNode }) {
+  return <span className="text-subtle-foreground">{children}</span>;
+}
+
+function PropRow({
   icon: Icon,
   label,
-  value,
+  children,
 }: {
-  icon: typeof User;
+  icon: typeof Eye;
   label: string;
-  value: ReactNode;
+  children: ReactNode;
 }) {
   return (
-    <div className="flex items-start gap-3">
-      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-subtle-foreground" />
-      <div className="min-w-0">
-        <p className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">
-          {label}
-        </p>
-        <div className="mt-1 font-medium text-foreground">{value}</div>
-      </div>
+    <div className="flex min-h-9 items-center gap-3 text-sm">
+      <span className="flex w-24 shrink-0 items-center gap-2 text-muted-foreground">
+        <Icon className="size-3.5 shrink-0" aria-hidden />
+        {label}
+      </span>
+      <div className="flex min-w-0 flex-1 items-center text-foreground">{children}</div>
+    </div>
+  );
+}
+
+function PeopleGroup({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      {children}
+    </div>
+  );
+}
+
+function PersonList({
+  people,
+  empty,
+}: {
+  people: Array<{ id: string; name: string }>;
+  empty: string;
+}) {
+  if (!people.length) return <p className="text-sm text-subtle-foreground">{empty}</p>;
+  return (
+    <ul className="space-y-1.5">
+      {people.map((person) => (
+        <li key={person.id} className="flex min-w-0 items-center gap-2">
+          <Avatar name={person.name} size="xs" />
+          <span className="truncate text-sm text-foreground">{person.name}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function CheckList({
+  items,
+  selected,
+  disabled,
+  onChange,
+  empty,
+}: {
+  items: Array<{ id: string; title: string }>;
+  selected: string[];
+  disabled: boolean;
+  onChange: (updater: (current: string[]) => string[]) => void;
+  empty: string | null;
+}) {
+  return (
+    <div className="max-h-44 space-y-0.5 overflow-y-auto rounded-lg border border-border p-1.5">
+      {items.map((item) => (
+        <label
+          key={item.id}
+          className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-foreground transition-colors hover:bg-muted"
+        >
+          <input
+            type="checkbox"
+            className="size-3.5 shrink-0 accent-primary"
+            checked={selected.includes(item.id)}
+            disabled={disabled}
+            onChange={(event) => {
+              const checked = event.target.checked;
+              onChange((current) =>
+                checked
+                  ? [...current, item.id]
+                  : current.filter((id) => id !== item.id),
+              );
+            }}
+          />
+          <span className="truncate">{item.title}</span>
+        </label>
+      ))}
+      {empty ? <p className="px-2 py-1.5 text-sm text-muted-foreground">{empty}</p> : null}
     </div>
   );
 }

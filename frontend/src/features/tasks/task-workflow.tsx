@@ -4,12 +4,21 @@ import { useEffect, useMemo, useState, type DragEvent, type FormEvent } from "re
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Check,
+  CornerDownRight,
+  Download,
   File as FileIcon,
   FileText,
   FileUp,
   ImageIcon,
+  Lock,
+  MessageSquare,
+  Paperclip,
+  Play,
   RotateCcw,
+  Send,
+  SmilePlus,
   Upload,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,7 +30,12 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Avatar } from "@/components/ui/avatar";
 import { StatusBadge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import { SkeletonList } from "@/components/ui/skeleton";
+import { toast } from "@/components/ui/toast";
+import { Tooltip } from "@/components/ui/tooltip";
 import { CreateResourceDialog } from "@/components/create-resource-dialog";
 import {
   collabKeys,
@@ -39,11 +53,16 @@ import {
   cn,
   formatDate,
   formatDateTime,
+  formatRelativeTime,
   nativeTextareaClass,
 } from "@/lib/utils";
 
-const workspaceCard =
-  "rounded-2xl border-border shadow-[0_1px_2px_rgba(15,23,42,0.04)]";
+type WorkflowProps = {
+  task: Task;
+  userId?: string;
+  canWrite: boolean;
+  isAdmin: boolean;
+};
 
 function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
@@ -59,20 +78,11 @@ function fileKind(name: string, mime: string) {
 }
 
 function FileTypeIcon({ name, mime }: { name: string; mime: string }) {
-  if (mime.startsWith("image/")) return <ImageIcon className="h-4 w-4" />;
+  if (mime.startsWith("image/")) return <ImageIcon className="size-4" />;
   if (mime.includes("pdf") || name.toLowerCase().endsWith(".pdf")) {
-    return <FileText className="h-4 w-4" />;
+    return <FileText className="size-4" />;
   }
-  return <FileIcon className="h-4 w-4" />;
-}
-
-function initials(name: string) {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+  return <FileIcon className="size-4" />;
 }
 
 function latestSubmissions(task: Task) {
@@ -86,34 +96,34 @@ function latestSubmissions(task: Task) {
   return latest;
 }
 
-function FileCard({
+/** Download row for an attached file. Exported for the task detail page. */
+export function FileCard({
   file,
 }: {
   file: { id: string; originalName: string; mimeType: string; sizeBytes: number };
 }) {
   return (
-    <div className="flex items-start justify-between gap-3 rounded-xl border border-border bg-card px-3.5 py-3 transition-colors hover:bg-muted">
-      <div className="flex min-w-0 items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
-          <FileTypeIcon name={file.originalName} mime={file.mimeType} />
+    <button
+      type="button"
+      onClick={() => void downloadFile(file.id, file.originalName)}
+      className="group flex w-full items-center gap-3 rounded-lg border border-border bg-card px-3 py-2.5 text-left transition-colors duration-150 hover:border-border-strong hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary-soft text-primary-soft-foreground">
+        <FileTypeIcon name={file.originalName} mime={file.mimeType} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-base font-medium text-foreground">
+          {file.originalName}
         </span>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-foreground">
-            {file.originalName}
-          </p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {fileKind(file.originalName, file.mimeType)} · {formatSize(file.sizeBytes)}
-          </p>
-        </div>
-      </div>
-      <button
-        type="button"
-        className="shrink-0 text-xs font-medium text-primary transition-colors hover:text-primary-hover"
-        onClick={() => void downloadFile(file.id, file.originalName)}
-      >
-        Download
-      </button>
-    </div>
+        <span className="block text-xs text-muted-foreground">
+          {fileKind(file.originalName, file.mimeType)} · {formatSize(file.sizeBytes)}
+        </span>
+      </span>
+      <Download
+        aria-label="Download"
+        className="size-4 shrink-0 text-subtle-foreground transition-colors group-hover:text-foreground"
+      />
+    </button>
   );
 }
 
@@ -207,17 +217,98 @@ function activityItems(task: Task) {
   return items;
 }
 
-export function TaskWorkPanel({
+/** Blocked / returned banners shown above the task content. */
+export function TaskNotices({ task }: { task: Task }) {
+  const blocker = task.blocked ? (task.blockedBy ?? task.dependsOn)[0] : null;
+  if (!blocker && !task.latestReturnComment) return null;
+  return (
+    <div className="space-y-3">
+      {blocker ? (
+        <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-warning-soft-foreground">
+          <Lock className="mt-0.5 size-4 shrink-0" aria-hidden />
+          <p className="text-base">
+            Blocked by <span className="font-medium">“{blocker.title}”</span>
+          </p>
+        </div>
+      ) : null}
+      {task.latestReturnComment ? (
+        <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-warning-soft-foreground">
+          <RotateCcw className="mt-0.5 size-4 shrink-0" aria-hidden />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">Returned with feedback</p>
+            <p className="mt-0.5 whitespace-pre-line text-base">
+              {task.latestReturnComment}
+            </p>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** Vertical timeline of workflow milestones (created → started → submitted → reviewed). */
+export function TaskActivityTimeline({
+  task,
+  className,
+}: {
+  task: Task;
+  className?: string;
+}) {
+  const timeline = activityItems(task);
+  return (
+    <Card className={className}>
+      <CardHeader className="pb-3">
+        <CardTitle>Activity</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ol>
+          {timeline.map((item, index) => (
+            <li key={`${item.label}-${item.at ?? index}`} className="flex gap-3">
+              <div className="flex w-3 flex-col items-center">
+                <span
+                  className={cn(
+                    "mt-1 size-2.5 shrink-0 rounded-full",
+                    item.done
+                      ? "bg-primary ring-4 ring-primary-soft"
+                      : "border-2 border-border-strong bg-card",
+                  )}
+                />
+                {index < timeline.length - 1 ? (
+                  <span className="my-1 min-h-6 w-px flex-1 bg-border" />
+                ) : null}
+              </div>
+              <div className={cn(index < timeline.length - 1 && "pb-3")}>
+                <p
+                  className={cn(
+                    "text-base font-medium leading-5",
+                    item.done ? "text-foreground" : "text-muted-foreground",
+                  )}
+                >
+                  {item.label}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {item.at ? formatDateTime(item.at) : "Pending"}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Primary workflow buttons (start / submit / jump to review) plus the submit dialog.
+ * Rendered in the task header.
+ */
+export function TaskWorkActions({
   task,
   userId,
   canWrite,
   isAdmin,
-}: {
-  task: Task;
-  userId?: string;
-  canWrite: boolean;
-  isAdmin: boolean;
-}) {
+  size = "default",
+}: WorkflowProps & { size?: "sm" | "default" }) {
   const workflow = useTaskWorkflow(task.id);
   const files = useFiles(task.workspaceId, { taskId: task.id });
   const upload = useUploadFile();
@@ -228,7 +319,6 @@ export function TaskWorkPanel({
   const [deliverables, setDeliverables] = useState("");
   const [justification, setJustification] = useState("");
   const ctx = useWorkflowContext(task, userId, canWrite, isAdmin);
-  const timeline = activityItems(task);
 
   async function addFiles(list: FileList | File[]) {
     for (const file of Array.from(list)) {
@@ -253,6 +343,7 @@ export function TaskWorkPanel({
         deliverables: deliverables.trim() || undefined,
         justification: justification.trim() || undefined,
       });
+      toast.success("Work submitted for review");
       setSubmitOpen(false);
       setFileIds([]);
       setNote("");
@@ -267,87 +358,48 @@ export function TaskWorkPanel({
     event.preventDefault();
     setDragging(false);
     if (event.dataTransfer.files.length) {
-      void addFiles(event.dataTransfer.files);
+      void addFiles(event.dataTransfer.files).catch(() => undefined);
     }
   }
 
+  if (!ctx.canStart && !ctx.canSubmit && !ctx.canReview) return null;
+
   return (
     <>
-      <Card className={workspaceCard}>
-        <CardHeader>
-          <CardTitle className="text-[18px]">Work Activity</CardTitle>
-          <CardDescription>
-            Start work, then submit. Submitting puts this under review.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          {task.blocked && (task.blockedBy ?? task.dependsOn)[0] ? (
-            <div className="rounded-xl border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning-soft-foreground">
-              🔒 Blocked by “{(task.blockedBy ?? task.dependsOn)[0].title}”
-            </div>
-          ) : null}
-          {task.latestReturnComment ? (
-            <div className="rounded-xl border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning-soft-foreground">
-              <p className="text-xs font-medium uppercase tracking-wide text-warning-soft-foreground">
-                Returned
-              </p>
-              <p className="mt-1">{task.latestReturnComment}</p>
-            </div>
-          ) : null}
-          <ol className="space-y-0">
-            {timeline.map((item, index) => (
-              <li key={`${item.label}-${item.at ?? index}`} className="flex gap-3">
-                <div className="flex w-4 flex-col items-center">
-                  <span
-                    className={cn(
-                      "mt-1 h-2.5 w-2.5 rounded-full",
-                      item.done ? "bg-primary" : "border-2 border-border-strong bg-card",
-                    )}
-                  />
-                  {index < timeline.length - 1 ? (
-                    <span className="min-h-8 w-px flex-1 bg-border" />
-                  ) : null}
-                </div>
-                <div className="pb-5">
-                  <p
-                    className={cn(
-                      "text-sm font-medium",
-                      item.done ? "text-foreground" : "text-muted-foreground",
-                    )}
-                  >
-                    {item.label}
-                  </p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {item.at ? formatDateTime(item.at) : "Pending"}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ol>
-          {ctx.canStart || ctx.canSubmit ? (
-            <div className="flex flex-wrap gap-2">
-              {ctx.canStart ? (
-                <Button
-                  onClick={() => workflow.startWork.mutate()}
-                  disabled={workflow.startWork.isPending}
-                >
-                  {task.status === "TODO" ? "Start work" : "Continue work"}
-                </Button>
-              ) : null}
-              {ctx.canSubmit ? (
-                <Button onClick={() => setSubmitOpen(true)}>
-                  {ctx.myLatest ? "Submit work again" : "Submit work"}
-                </Button>
-              ) : null}
-            </div>
-          ) : null}
-          {workflow.startWork.error ? (
-            <p className="text-sm text-destructive">
-              {workflow.startWork.error.message}
-            </p>
-          ) : null}
-        </CardContent>
-      </Card>
+      {ctx.canReview ? (
+        <Button size={size} variant={ctx.canSubmit || ctx.canStart ? "outline" : "default"} asChild>
+          <a href="#task-submissions">
+            <Check />
+            Review submission
+          </a>
+        </Button>
+      ) : null}
+      {ctx.canStart ? (
+        <Button
+          size={size}
+          variant={ctx.canSubmit ? "outline" : "default"}
+          onClick={() =>
+            workflow.startWork.mutate(undefined, {
+              onSuccess: () => toast.success("Work started"),
+            })
+          }
+          loading={workflow.startWork.isPending}
+        >
+          <Play />
+          {task.status === "TODO" ? "Start work" : "Continue work"}
+        </Button>
+      ) : null}
+      {ctx.canSubmit ? (
+        <Button size={size} onClick={() => setSubmitOpen(true)}>
+          <Send />
+          {ctx.myLatest ? "Submit work again" : "Submit work"}
+        </Button>
+      ) : null}
+      {workflow.startWork.error ? (
+        <p className="w-full text-sm text-danger-soft-foreground sm:text-right">
+          {workflow.startWork.error.message}
+        </p>
+      ) : null}
 
       <CreateResourceDialog
         open={submitOpen}
@@ -357,14 +409,14 @@ export function TaskWorkPanel({
         className="max-w-xl"
       >
         <form className="space-y-5" onSubmit={handleSubmit}>
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <Label>Deliverable files</Label>
             <label
               className={cn(
-                "flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-8 text-center transition-colors",
+                "flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-7 text-center transition-colors duration-150 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
                 dragging
-                  ? "border-primary bg-accent"
-                  : "border-border bg-secondary/60 hover:border-primary/40 hover:bg-accent/60",
+                  ? "border-primary bg-primary-soft"
+                  : "border-border bg-muted/50 hover:border-primary/40 hover:bg-accent/60",
               )}
               onDragOver={(event) => {
                 event.preventDefault();
@@ -373,10 +425,10 @@ export function TaskWorkPanel({
               onDragLeave={() => setDragging(false)}
               onDrop={handleDrop}
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Upload className="h-5 w-5" />
+              <span className="flex size-10 items-center justify-center rounded-full bg-primary-soft text-primary-soft-foreground">
+                <Upload className="size-5" />
               </span>
-              <p className="mt-3 text-sm font-medium">
+              <p className="mt-3 text-base font-medium text-foreground">
                 Drop files here or click to upload
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
@@ -387,7 +439,7 @@ export function TaskWorkPanel({
                 className="sr-only"
                 onChange={(event) => {
                   if (event.target.files?.length) {
-                    void addFiles(event.target.files);
+                    void addFiles(event.target.files).catch(() => undefined);
                   }
                   event.target.value = "";
                 }}
@@ -397,21 +449,22 @@ export function TaskWorkPanel({
               <p className="text-sm text-muted-foreground">Uploading…</p>
             ) : null}
             {upload.error ? (
-              <p className="text-sm text-destructive">{upload.error.message}</p>
+              <p className="text-sm text-danger-soft-foreground">{upload.error.message}</p>
             ) : null}
             {(files.data ?? []).length ? (
-              <ul className="space-y-2">
+              <ul className="space-y-1.5">
                 {(files.data ?? []).map((file) => {
                   const selected = fileIds.includes(file.id);
                   return (
-                    <li key={file.id}>
+                    <li key={file.id} className="flex items-center gap-2">
                       <button
                         type="button"
+                        aria-pressed={selected}
                         className={cn(
-                          "flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors",
+                          "flex min-w-0 flex-1 items-center gap-3 rounded-lg border px-3 py-2 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                           selected
-                            ? "border-primary/40 bg-accent"
-                            : "border-border bg-card hover:bg-secondary",
+                            ? "border-primary/40 bg-primary-soft"
+                            : "border-border bg-card hover:bg-muted",
                         )}
                         onClick={() =>
                           setFileIds((current) =>
@@ -423,44 +476,38 @@ export function TaskWorkPanel({
                       >
                         <span
                           className={cn(
-                            "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                            "flex size-7 shrink-0 items-center justify-center rounded-md",
                             selected
                               ? "bg-primary text-primary-foreground"
-                              : "bg-secondary text-muted-foreground",
+                              : "bg-muted text-muted-foreground",
                           )}
                         >
                           {selected ? (
-                            <Check className="h-4 w-4" />
+                            <Check className="size-4" />
                           ) : (
-                            <FileUp className="h-4 w-4" />
+                            <FileUp className="size-4" />
                           )}
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium">
+                          <span className="block truncate text-base font-medium text-foreground">
                             {file.originalName}
                           </span>
                           <span className="block text-xs text-muted-foreground">
                             {formatSize(file.sizeBytes)}
                           </span>
                         </span>
-                        <span
-                          role="link"
-                          tabIndex={0}
-                          className="text-xs text-primary hover:underline"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            void downloadFile(file.id, file.originalName);
-                          }}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter") {
-                              event.stopPropagation();
-                              void downloadFile(file.id, file.originalName);
-                            }
-                          }}
-                        >
-                          Download
-                        </span>
                       </button>
+                      <Tooltip content="Download">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`Download ${file.originalName}`}
+                          onClick={() => void downloadFile(file.id, file.originalName)}
+                        >
+                          <Download />
+                        </Button>
+                      </Tooltip>
                     </li>
                   );
                 })}
@@ -502,7 +549,7 @@ export function TaskWorkPanel({
             </div>
           </div>
           {workflow.submit.error ? (
-            <p className="text-sm text-destructive">
+            <p className="text-sm text-danger-soft-foreground">
               {workflow.submit.error.message}
             </p>
           ) : null}
@@ -516,9 +563,11 @@ export function TaskWorkPanel({
             </Button>
             <Button
               type="submit"
-              disabled={workflow.submit.isPending || upload.isPending}
+              loading={workflow.submit.isPending}
+              disabled={upload.isPending}
             >
-              {workflow.submit.isPending ? "Submitting…" : "Submit for review"}
+              <Send />
+              Submit for review
             </Button>
           </div>
         </form>
@@ -527,17 +576,41 @@ export function TaskWorkPanel({
   );
 }
 
+/** Notices, activity timeline and workflow buttons in one block. */
+export function TaskWorkPanel(props: WorkflowProps) {
+  return (
+    <div className="space-y-4">
+      <TaskNotices task={props.task} />
+      <TaskActivityTimeline task={props.task} />
+      <div className="flex flex-wrap gap-2">
+        <TaskWorkActions {...props} />
+      </div>
+    </div>
+  );
+}
+
+function FieldBlock({ label, value, empty }: { label: string; value: string | null; empty: string }) {
+  return (
+    <div>
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <p
+        className={cn(
+          "mt-1 whitespace-pre-line text-base leading-relaxed",
+          value ? "text-foreground" : "text-subtle-foreground",
+        )}
+      >
+        {value || empty}
+      </p>
+    </div>
+  );
+}
+
 export function TaskReviewPanel({
   task,
   userId,
   canWrite,
   isAdmin,
-}: {
-  task: Task;
-  userId?: string;
-  canWrite: boolean;
-  isAdmin: boolean;
-}) {
+}: WorkflowProps) {
   const workflow = useTaskWorkflow(task.id);
   const [returnOpen, setReturnOpen] = useState(false);
   const [approveOpen, setApproveOpen] = useState(false);
@@ -563,50 +636,108 @@ export function TaskReviewPanel({
 
   return (
     <>
-      <Card className={workspaceCard}>
+      <Card id="task-submissions" className="scroll-mt-6">
         <CardHeader>
-          <CardTitle className="text-[18px]">Work Submission</CardTitle>
-          <CardDescription>
-            Each assignee submits their own work. The task is completed only when every assignee is approved.
-          </CardDescription>
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1">
+              <CardTitle>Submissions</CardTitle>
+              <CardDescription>
+                Each assignee submits their own work. The task completes when every assignee is approved.
+              </CardDescription>
+            </div>
+            {versions.length ? (
+              <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground tabular">
+                {versions.length} version{versions.length === 1 ? "" : "s"}
+              </span>
+            ) : null}
+          </div>
         </CardHeader>
         <CardContent className="space-y-5">
+          {ctx.canReview ? (
+            <div className="flex flex-col gap-3 rounded-lg border border-primary/25 bg-primary-soft px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-base font-medium text-primary-soft-foreground">
+                  Awaiting your review
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Approve the selected version or return it with feedback.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="hover:border-danger/40 hover:bg-danger-soft hover:text-danger-soft-foreground"
+                  onClick={() => setReturnOpen(true)}
+                  disabled={!returnTarget}
+                >
+                  <RotateCcw />
+                  Return with comment
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => setApproveOpen(true)}
+                  disabled={!selected || selected.status !== "SUBMITTED"}
+                >
+                  <Check />
+                  Approve work
+                </Button>
+              </div>
+            </div>
+          ) : null}
+
           {(task.assigneeWork ?? []).length > 1 ? (
-            <ul className="space-y-2 rounded-xl border border-border px-3.5 py-3">
+            <ul className="divide-y divide-border rounded-lg border border-border">
               {(task.assigneeWork ?? []).map((person) => (
                 <li
                   key={person.userId}
-                  className="flex items-center justify-between gap-3 text-sm"
+                  className="flex items-center justify-between gap-3 px-3 py-2"
                 >
-                  <span className="font-medium text-foreground">{person.name}</span>
+                  <span className="flex min-w-0 items-center gap-2">
+                    <Avatar name={person.name} size="sm" />
+                    <span className="truncate text-base font-medium text-foreground">
+                      {person.name}
+                    </span>
+                  </span>
                   <StatusBadge value={person.status} />
                 </li>
               ))}
             </ul>
           ) : null}
+
           {versions.length > 1 ? (
-            <div className="space-y-2">
+            <div
+              role="radiogroup"
+              aria-label="Submission version"
+              className="flex gap-2 overflow-x-auto pb-1"
+            >
               {versions.map((item) => {
                 const active = item.id === selected?.id;
                 return (
                   <button
                     key={item.id}
                     type="button"
+                    role="radio"
+                    aria-checked={active}
                     onClick={() => setSelectedId(item.id)}
                     className={cn(
-                      "flex w-full items-center justify-between rounded-xl border px-3.5 py-2.5 text-left transition-colors",
+                      "flex shrink-0 flex-col items-start gap-1 rounded-lg border px-3 py-2 text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       active
-                        ? "border-primary/30 bg-primary-soft"
+                        ? "border-primary/40 bg-primary-soft"
                         : "border-border bg-card hover:bg-muted",
                     )}
                   >
-                    <div>
-                      <p className="text-sm font-medium">Version {item.version}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Submitted {formatDate(item.createdAt)}
-                      </p>
-                    </div>
-                    <StatusBadge value={item.status} />
+                    <span className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-foreground">
+                        v{item.version} · {item.submitter.name.split(" ")[0]}
+                      </span>
+                      <StatusBadge value={item.status} />
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDate(item.createdAt)}
+                    </span>
                   </button>
                 );
               })}
@@ -614,133 +745,74 @@ export function TaskReviewPanel({
           ) : null}
 
           {!selected ? (
-            <div className="rounded-xl border border-dashed border-border px-5 py-8 text-center">
-              <p className="text-sm font-medium text-foreground">
-                No work has been submitted yet
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Assignee uploads and notes will appear here after submit.
-              </p>
-            </div>
+            <EmptyState
+              compact
+              icon={FileUp}
+              title="No work submitted yet"
+              description="Assignee uploads and notes will appear here after they submit."
+              className="rounded-lg border border-dashed border-border"
+            />
           ) : (
             <div className="space-y-5">
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div>
-                  <p className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">
-                    Submitted by
-                  </p>
-                  <p className="mt-1 text-sm font-medium text-foreground">
-                    {selected.submitter.name}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">
-                    Version
-                  </p>
-                  <p className="mt-1 text-sm font-medium text-foreground">
-                    Version {selected.version}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">
-                    Submitted
-                  </p>
-                  <p className="mt-1 text-sm font-medium text-foreground">
-                    {formatDateTime(selected.createdAt)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <p className="text-[13px] font-semibold text-foreground">
-                    Submission Notes
-                  </p>
-                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                    {selected.note || "No notes were added."}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[13px] font-semibold text-foreground">
-                    Deliverables
-                  </p>
-                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                    {selected.deliverables || "No deliverables summary."}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[13px] font-semibold text-foreground">
-                    Justification
-                  </p>
-                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                    {selected.justification || "No justification provided."}
-                  </p>
-                </div>
-                {selected.reviewNote ? (
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-lg bg-muted/60 px-4 py-3">
+                <div className="flex items-center gap-2.5">
+                  <Avatar name={selected.submitter.name} size="default" />
                   <div>
-                    <p className="text-[13px] font-semibold text-foreground">
-                      Reviewer comment
+                    <p className="text-base font-medium text-foreground">
+                      {selected.submitter.name}
                     </p>
-                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                      {selected.reviewNote}
+                    <p className="text-xs text-muted-foreground">
+                      Submitted {formatDateTime(selected.createdAt)}
                     </p>
                   </div>
-                ) : null}
+                </div>
+                <div className="ml-auto flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    Version {selected.version}
+                  </span>
+                  <StatusBadge value={selected.status} />
+                </div>
               </div>
 
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <FieldBlock label="Submission notes" value={selected.note} empty="No notes were added." />
+                </div>
+                <FieldBlock label="Deliverables" value={selected.deliverables} empty="No deliverables summary." />
+                <FieldBlock label="Justification" value={selected.justification} empty="No justification provided." />
+              </div>
+              {selected.reviewNote ? (
+                <div className="rounded-lg border-l-2 border-warning bg-warning-soft/60 px-4 py-3">
+                  <p className="text-xs font-medium text-warning-soft-foreground">
+                    Reviewer comment
+                  </p>
+                  <p className="mt-1 whitespace-pre-line text-base text-foreground">
+                    {selected.reviewNote}
+                  </p>
+                </div>
+              ) : null}
+
               <div className="space-y-2">
-                <p className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">
+                <p className="text-xs font-medium text-muted-foreground">
                   Submitted files
                 </p>
                 {(selected.files ?? []).length ? (
-                  <div className="space-y-2">
+                  <div className="grid gap-2 sm:grid-cols-2">
                     {(selected.files ?? []).map((file) => (
                       <FileCard key={file.id} file={file} />
                     ))}
                   </div>
                 ) : (
-                  <div className="rounded-xl border border-dashed border-border px-4 py-6 text-center">
-                    <p className="text-sm font-medium text-foreground">
-                      No files attached
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      This submission was sent without an upload.
-                    </p>
-                  </div>
+                  <p className="text-sm text-subtle-foreground">
+                    This submission was sent without an upload.
+                  </p>
                 )}
               </div>
             </div>
           )}
 
-          {ctx.canReview ? (
-            <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm font-medium text-foreground">
-                Review complete?
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="border-danger/30 text-danger-soft-foreground hover:bg-danger-soft hover:text-danger-soft-foreground"
-                  onClick={() => setReturnOpen(true)}
-                  disabled={!returnTarget}
-                >
-                  <RotateCcw />
-                  Return with Comment
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => setApproveOpen(true)}
-                  disabled={!selected || selected.status !== "SUBMITTED"}
-                >
-                  <Check />
-                  Approve Work
-                </Button>
-              </div>
-            </div>
-          ) : null}
           {workflow.review.error ? (
-            <p className="text-sm text-destructive">
+            <p className="text-sm text-danger-soft-foreground">
               {workflow.review.error.message}
             </p>
           ) : null}
@@ -769,16 +841,23 @@ export function TaskReviewPanel({
           </Button>
           <Button
             type="button"
-            disabled={!selected || workflow.review.isPending}
+            disabled={!selected}
+            loading={workflow.review.isPending}
             onClick={() => {
               if (!selected) return;
               workflow.review.mutate(
                 { status: "APPROVED", submissionId: selected.id },
-                { onSuccess: () => setApproveOpen(false) },
+                {
+                  onSuccess: () => {
+                    toast.success("Submission approved");
+                    setApproveOpen(false);
+                  },
+                },
               );
             }}
           >
-            {workflow.review.isPending ? "Approving…" : "Approve Work"}
+            <Check />
+            Approve work
           </Button>
         </div>
       </CreateResourceDialog>
@@ -801,6 +880,7 @@ export function TaskReviewPanel({
               },
               {
                 onSuccess: () => {
+                  toast.success("Submission returned with feedback");
                   setReturnOpen(false);
                   setReturnNote("");
                 },
@@ -821,7 +901,7 @@ export function TaskReviewPanel({
             />
           </div>
           {workflow.review.error ? (
-            <p className="text-sm text-destructive">
+            <p className="text-sm text-danger-soft-foreground">
               {workflow.review.error.message}
             </p>
           ) : null}
@@ -835,9 +915,11 @@ export function TaskReviewPanel({
             </Button>
             <Button
               type="submit"
-              disabled={!returnNote.trim() || workflow.review.isPending}
+              disabled={!returnNote.trim()}
+              loading={workflow.review.isPending}
             >
-              Return Submission
+              <RotateCcw />
+              Return submission
             </Button>
           </div>
         </form>
@@ -870,9 +952,10 @@ export function TaskCommentsSection({
     return () => leaveTask(taskId);
   }, [joinTask, leaveTask, taskId]);
 
-  const roots = (comments.data ?? []).filter((item) => !item.parentId);
-  const repliesOf = (id: string) =>
-    (comments.data ?? []).filter((item) => item.parentId === id);
+  const all = comments.data ?? [];
+  const roots = all.filter((item) => !item.parentId);
+  const repliesOf = (id: string) => all.filter((item) => item.parentId === id);
+  const replyingTo = replyId ? all.find((item) => item.id === replyId) : null;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -890,92 +973,144 @@ export function TaskCommentsSection({
     void queryClient.invalidateQueries({
       queryKey: collabKeys.comments(workspaceId, taskId),
     });
+    toast.success(replyId ? "Reply posted" : "Comment posted");
     setBody("");
     setReplyId(null);
     setPendingFiles([]);
   }
 
   return (
-    <Card className={workspaceCard}>
+    <Card>
       <CardHeader>
-        <CardTitle className="text-[18px]">Comments</CardTitle>
+        <div className="flex items-center gap-2">
+          <CardTitle>Comments</CardTitle>
+          {all.length ? (
+            <span className="rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground tabular">
+              {all.length}
+            </span>
+          ) : null}
+        </div>
         <CardDescription>
           Mentions, replies, reactions, and files stay on the task.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {(comments.data ?? []).length ? (
-          <ul className="space-y-3">
+      <CardContent className="space-y-5">
+        {comments.isLoading ? (
+          <SkeletonList rows={2} className="-mx-4" />
+        ) : all.length ? (
+          <ul className="space-y-5">
             {roots.map((item) => (
-              <li key={item.id} className="rounded-xl border border-border px-4 py-3">
+              <li key={item.id}>
                 <CommentBody
                   item={item}
                   canWrite={canWrite}
                   onReply={() => setReplyId(item.id)}
                   onReact={(emoji) =>
-                    void react.mutateAsync({ commentId: item.id, emoji })
+                    void react
+                      .mutateAsync({ commentId: item.id, emoji })
+                      .catch(() => undefined)
                   }
                 />
-                {repliesOf(item.id).map((reply) => (
-                  <div
-                    key={reply.id}
-                    className="mt-3 ml-4 rounded-lg border border-border bg-muted px-3 py-2"
-                  >
-                    <CommentBody
-                      item={reply}
-                      canWrite={canWrite}
-                      onReply={() => setReplyId(reply.id)}
-                      onReact={(emoji) =>
-                        void react.mutateAsync({ commentId: reply.id, emoji })
-                      }
-                    />
-                  </div>
-                ))}
+                {repliesOf(item.id).length ? (
+                  <ul className="ml-4 mt-3 space-y-3 border-l-2 border-border pl-4 sm:ml-11">
+                    {repliesOf(item.id).map((reply) => (
+                      <li key={reply.id}>
+                        <CommentBody
+                          item={reply}
+                          compact
+                          canWrite={canWrite}
+                          onReply={() => setReplyId(reply.id)}
+                          onReact={(emoji) =>
+                            void react
+                              .mutateAsync({ commentId: reply.id, emoji })
+                              .catch(() => undefined)
+                          }
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </li>
             ))}
           </ul>
         ) : (
-          <div className="rounded-xl border border-dashed border-border px-4 py-6 text-center">
-            <p className="text-sm font-medium text-foreground">No comments yet</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Add a note for the assignee or reviewer.
-            </p>
-          </div>
+          <EmptyState
+            compact
+            icon={MessageSquare}
+            title="No comments yet"
+            description="Add a note for the assignee or reviewer."
+          />
         )}
         {canWrite ? (
-          <form className="space-y-2" onSubmit={(event) => void submit(event)}>
-            {replyId ? (
-              <p className="text-xs text-muted-foreground">
-                Replying{" "}
-                <button type="button" onClick={() => setReplyId(null)}>
-                  · cancel
+          <form
+            className="rounded-xl border border-border bg-card shadow-xs transition-shadow focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20"
+            onSubmit={(event) => void submit(event).catch(() => undefined)}
+          >
+            {replyingTo || replyId ? (
+              <div className="flex items-center gap-1.5 border-b border-border px-3 py-1.5 text-xs text-muted-foreground">
+                <CornerDownRight className="size-3.5" aria-hidden />
+                Replying to{" "}
+                <span className="font-medium text-foreground">
+                  {replyingTo?.author.name ?? "comment"}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Cancel reply"
+                  className="ml-auto inline-flex size-5 items-center justify-center rounded-sm hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={() => setReplyId(null)}
+                >
+                  <X className="size-3.5" />
                 </button>
-              </p>
+              </div>
             ) : null}
             <textarea
-              className={nativeTextareaClass}
+              aria-label="Comment"
+              className="block min-h-20 w-full resize-y rounded-t-xl bg-transparent px-3 py-2.5 text-base text-foreground placeholder:text-subtle-foreground focus:outline-none"
               value={body}
               onChange={(event) => setBody(event.target.value)}
               placeholder="Write a comment. Use @name to mention."
             />
-            <input
-              type="file"
-              multiple
-              onChange={(event) =>
-                setPendingFiles(Array.from(event.target.files ?? []))
-              }
-            />
+            {pendingFiles.length ? (
+              <div className="flex flex-wrap gap-1.5 px-3 pb-2">
+                {pendingFiles.map((file) => (
+                  <span
+                    key={`${file.name}-${file.size}`}
+                    className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+                  >
+                    <Paperclip className="size-3" aria-hidden />
+                    {file.name}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+            <div className="flex items-center justify-between gap-2 border-t border-border px-2 py-1.5">
+              <label className="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring">
+                <Paperclip className="size-3.5" aria-hidden />
+                Attach
+                <input
+                  type="file"
+                  multiple
+                  className="sr-only"
+                  onChange={(event) =>
+                    setPendingFiles(Array.from(event.target.files ?? []))
+                  }
+                />
+              </label>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={!body.trim()}
+                loading={addComment.isPending || upload.isPending}
+              >
+                <Send />
+                {replyId ? "Reply" : "Comment"}
+              </Button>
+            </div>
             {addComment.error ? (
-              <p className="text-sm text-destructive">
+              <p className="px-3 pb-2 text-sm text-danger-soft-foreground">
                 {addComment.error.message}
               </p>
             ) : null}
-            <Button
-              type="submit"
-              disabled={!body.trim() || addComment.isPending}
-            >
-              {addComment.isPending ? "Posting…" : "Post comment"}
-            </Button>
           </form>
         ) : null}
       </CardContent>
@@ -986,6 +1121,7 @@ export function TaskCommentsSection({
 function CommentBody({
   item,
   canWrite,
+  compact,
   onReply,
   onReact,
 }: {
@@ -1003,89 +1139,100 @@ function CommentBody({
     }>;
   };
   canWrite: boolean;
+  compact?: boolean;
   onReply: () => void;
   onReact: (emoji: string) => void;
 }) {
   const parts = item.body.split(/(@[\w.\-]+)/g);
   return (
-    <>
-      <div className="flex items-center gap-2">
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-soft text-[11px] font-semibold text-primary">
-          {initials(item.author.name)}
-        </span>
-        <p className="text-sm font-medium text-foreground">{item.author.name}</p>
-      </div>
-      <p className="mt-2 text-sm leading-6 text-foreground">
-        {parts.map((part, index) =>
-          part.startsWith("@") ? (
-            <span key={`${part}-${index}`} className="font-medium text-primary">
-              {part}
-            </span>
-          ) : (
-            <span key={`${part}-${index}`}>{part}</span>
-          ),
-        )}
-      </p>
-      {(item.files ?? []).length ? (
-        <div className="mt-2 space-y-1">
-          {(item.files ?? []).map((file) => (
+    <div className="flex gap-3">
+      <Avatar name={item.author.name} size={compact ? "sm" : "default"} />
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <p className="text-base font-medium text-foreground">{item.author.name}</p>
+          <time
+            dateTime={item.createdAt}
+            title={formatDateTime(item.createdAt)}
+            className="text-xs text-subtle-foreground"
+          >
+            {formatRelativeTime(item.createdAt)}
+          </time>
+        </div>
+        <div className="mt-1 inline-block max-w-full rounded-lg rounded-tl-sm bg-muted px-3 py-2">
+          <p className="whitespace-pre-line break-words text-base leading-relaxed text-foreground">
+            {parts.map((part, index) =>
+              part.startsWith("@") ? (
+                <span
+                  key={`${part}-${index}`}
+                  className="rounded-sm bg-primary-soft px-0.5 font-medium text-primary-soft-foreground"
+                >
+                  {part}
+                </span>
+              ) : (
+                <span key={`${part}-${index}`}>{part}</span>
+              ),
+            )}
+          </p>
+          {(item.files ?? []).length ? (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {(item.files ?? []).map((file) => (
+                <button
+                  key={file.id}
+                  type="button"
+                  className="inline-flex max-w-full items-center gap-1 rounded-md border border-border bg-card px-2 py-0.5 text-xs text-foreground transition-colors hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={() => void downloadFile(file.id, file.originalName)}
+                >
+                  <Paperclip className="size-3 shrink-0 text-muted-foreground" aria-hidden />
+                  <span className="truncate">{file.originalName}</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+        <div className="mt-1.5 flex flex-wrap items-center gap-1">
+          {(item.reactions ?? []).map((reaction) => (
             <button
-              key={file.id}
+              key={reaction.emoji}
               type="button"
-              className="block text-xs text-primary"
-              onClick={() => void downloadFile(file.id, file.originalName)}
+              aria-label={`React ${reaction.emoji} (${reaction.count})`}
+              className="inline-flex h-6 items-center gap-1 rounded-full border border-border bg-card px-2 text-xs text-foreground tabular transition-colors hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              onClick={() => onReact(reaction.emoji)}
             >
-              {file.originalName}
+              {reaction.emoji} {reaction.count}
             </button>
           ))}
-        </div>
-      ) : null}
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        {(item.reactions ?? []).map((reaction) => (
-          <button
-            key={reaction.emoji}
-            type="button"
-            className="rounded-full bg-muted px-2 py-0.5 text-xs"
-            onClick={() => onReact(reaction.emoji)}
-          >
-            {reaction.emoji} {reaction.count}
-          </button>
-        ))}
-        {canWrite ? (
-          <>
-            {["👍", "🎉", "✅"].map((emoji) => (
+          {canWrite ? (
+            <>
+              <span className="inline-flex items-center gap-0.5 rounded-full px-1 text-subtle-foreground">
+                <SmilePlus className="size-3.5" aria-hidden />
+                {["👍", "🎉", "✅"].map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    aria-label={`React with ${emoji}`}
+                    className="inline-flex size-6 items-center justify-center rounded-full text-xs opacity-70 transition-[opacity,background-color] hover:bg-muted hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    onClick={() => onReact(emoji)}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </span>
               <button
-                key={emoji}
                 type="button"
-                className="text-xs text-subtle-foreground"
-                onClick={() => onReact(emoji)}
+                className="inline-flex h-6 items-center rounded-md px-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onClick={onReply}
               >
-                {emoji}
+                Reply
               </button>
-            ))}
-            <button
-              type="button"
-              className="text-xs font-medium text-primary"
-              onClick={onReply}
-            >
-              Reply
-            </button>
-          </>
-        ) : null}
-        <p className="ml-auto text-xs text-muted-foreground">
-          {formatDateTime(item.createdAt)}
-        </p>
+            </>
+          ) : null}
+        </div>
       </div>
-    </>
+    </div>
   );
 }
 
-export function TaskWorkflowPanel(props: {
-  task: Task;
-  userId?: string;
-  canWrite: boolean;
-  isAdmin: boolean;
-}) {
+export function TaskWorkflowPanel(props: WorkflowProps) {
   return (
     <>
       <TaskReviewPanel {...props} />
