@@ -1,6 +1,7 @@
 "use client";
 
 import { CreateResourceDialog } from "@/components/create-resource-dialog";
+import { toast } from "@/components/ui/toast";
 import { useCreateTodo } from "@/features/todos/hooks";
 import {
   emptyTodoForm,
@@ -30,11 +31,12 @@ export function CreateTodoDialog({
         key={open ? "open" : "closed"}
         initial={emptyTodoForm()}
         submitting={createTodo.isPending}
-        submitLabel="Create"
+        submitLabel="Create todo"
         error={createTodo.error?.message}
         onSubmit={async (values) => {
           try {
             await createTodo.mutateAsync(toTodoWriteInput(values));
+            toast.success("Todo created");
             onOpenChange(false);
           } catch {
             // Error is shown from the mutation.
