@@ -1,15 +1,28 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
+  Activity,
   AlertTriangle,
+  BarChart3,
+  CalendarClock,
+  CalendarRange,
   CheckCircle2,
+  ChevronDown,
   ClipboardList,
   Download,
+  Eye,
+  FileSpreadsheet,
+  FileText,
   FolderKanban,
-  Loader2,
+  PieChart,
   Printer,
+  SlidersHorizontal,
+  Timer,
+  TrendingUp,
+  Users,
+  X,
 } from "lucide-react";
 import {
   EmptyState,
@@ -17,18 +30,38 @@ import {
   PageHeader,
   PageShell,
   SegmentedControl,
+  StatCard,
   Surface,
 } from "@/components/page-header";
 import { PersonAvatar } from "@/components/member-avatar-group";
+import { AvatarStack } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/ui/badge";
+import { Badge, PriorityBadge, StatusBadge, type BadgeVariant } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ErrorState } from "@/components/ui/empty-state";
+import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  BarList,
+  ChartLegend,
   DonutChart,
-  KpiCard,
   Meter,
   PageControls,
   TrendChart,
+  utilizationTone,
 } from "@/features/insights/ui";
 import { useDashboard, useMyDay, useReports } from "@/features/insights/hooks";
 import { useProjects } from "@/features/projects/hooks";
@@ -159,14 +192,18 @@ function bucketTrends(
   }));
 }
 
-function projectHealth(completed: number, open: number, overdue: number) {
+function projectHealth(
+  completed: number,
+  open: number,
+  overdue: number,
+): { label: string; variant: BadgeVariant } {
   if (overdue > 0 && completed + open > 0 && overdue / (completed + open) >= 0.25) {
-    return { label: "Delayed", className: "bg-danger-soft text-danger" };
+    return { label: "Delayed", variant: "danger" };
   }
   if (overdue > 0) {
-    return { label: "At risk", className: "bg-warning-soft text-warning" };
+    return { label: "At risk", variant: "warning" };
   }
-  return { label: "Healthy", className: "bg-success-soft text-success" };
+  return { label: "Healthy", variant: "success" };
 }
 
 function downloadCsv(filename: string, rows: string[][]) {
@@ -369,34 +406,23 @@ export default function ReportsPage() {
     setExportOpen(false);
   }
 
+  const activeFilterCount = [projectId, teamId, userId, status, priority].filter(
+    Boolean,
+  ).length;
+  const byPriority = reports.data?.completion.byPriority ?? {};
+  const priorityItems = PRIORITIES.map((item) => ({
+    key: item,
+    label: <PriorityBadge value={item} />,
+    value: byPriority[item] ?? 0,
+    color: PRIORITY_COLORS[item] ?? "var(--chart-6)",
+  })).reverse();
+  const priorityTotal = priorityItems.reduce((sum, item) => sum + item.value, 0);
+  const today = localDateYmd();
+
   const filterBar = (
-    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
-      {preset === "custom" ? (
-        <>
-          <input
-            type="date"
-            className={cn(nativeSelectClass, "h-8")}
-            value={from}
-            onChange={(event) => {
-              setCustomFrom(event.target.value);
-              setPage(1);
-            }}
-            aria-label="From"
-          />
-          <input
-            type="date"
-            className={cn(nativeSelectClass, "h-8")}
-            value={to}
-            onChange={(event) => {
-              setCustomTo(event.target.value);
-              setPage(1);
-            }}
-            aria-label="To"
-          />
-        </>
-      ) : null}
+    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
       <select
-        className={cn(nativeSelectClass, "h-8")}
+        className={nativeSelectClass}
         value={projectId}
         onChange={(event) => {
           setPage(1);
@@ -412,7 +438,7 @@ export default function ReportsPage() {
         ))}
       </select>
       <select
-        className={cn(nativeSelectClass, "h-8")}
+        className={nativeSelectClass}
         value={teamId}
         onChange={(event) => {
           setPage(1);
@@ -428,7 +454,7 @@ export default function ReportsPage() {
         ))}
       </select>
       <select
-        className={cn(nativeSelectClass, "h-8")}
+        className={nativeSelectClass}
         value={userId}
         onChange={(event) => {
           setPage(1);
@@ -444,7 +470,7 @@ export default function ReportsPage() {
         ))}
       </select>
       <select
-        className={cn(nativeSelectClass, "h-8")}
+        className={nativeSelectClass}
         value={status}
         onChange={(event) => setStatus(event.target.value as TaskStatus | "")}
         aria-label="Task status"
@@ -457,7 +483,7 @@ export default function ReportsPage() {
         ))}
       </select>
       <select
-        className={cn(nativeSelectClass, "h-8")}
+        className={nativeSelectClass}
         value={priority}
         onChange={(event) => setPriority(event.target.value as Priority | "")}
         aria-label="Priority"
@@ -473,19 +499,62 @@ export default function ReportsPage() {
   );
 
   return (
-    <PageShell className="max-w-[1180px] space-y-6">
+    <PageShell>
       <PageHeader
+        icon={BarChart3}
         title="Reports & Analytics"
         description="Track productivity, task progress, team performance, and project health."
+        meta={
+          <span className="inline-flex items-center gap-1.5 tabular">
+            <CalendarRange className="size-3.5" />
+            {formatDate(from)} – {formatDate(to)}
+          </span>
+        }
         actions={
           <div className="no-print flex flex-wrap items-center gap-2">
+            <DropdownMenu open={exportOpen} onOpenChange={setExportOpen}>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline">
+                  <Download />
+                  Export
+                  <ChevronDown className="text-muted-foreground" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem disabled={!reports.data} onSelect={exportCsv}>
+                  <FileSpreadsheet />
+                  Export CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => {
+                    setExportOpen(false);
+                    window.print();
+                  }}
+                >
+                  <FileText />
+                  Export PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button size="sm" variant="outline" onClick={() => window.print()}>
+              <Printer />
+              Print
+            </Button>
+          </div>
+        }
+      />
+
+      <Surface className="no-print flex flex-col gap-3 p-3 sm:p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <SegmentedControl
+              label="Date range"
               value={preset}
               onChange={(value) => {
                 setPreset(value);
                 setPage(1);
               }}
-              className="hidden xl:inline-flex"
+              className="hidden md:inline-flex"
               options={[
                 { value: "today", label: "Today" },
                 { value: "week", label: "Week" },
@@ -495,88 +564,70 @@ export default function ReportsPage() {
                 { value: "custom", label: "Custom" },
               ]}
             />
-            <div className="relative">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setExportOpen((open) => !open)}
-              >
-                <Download className="h-4 w-4" />
-                Export
-              </Button>
-              {exportOpen ? (
-                <div className="absolute right-0 z-20 mt-1 w-40 overflow-hidden rounded-lg border border-border bg-card py-1 shadow-[0_12px_32px_rgba(15,23,42,0.1)]">
-                  <button
-                    type="button"
-                    className="block w-full px-3 py-1.5 text-left text-[13px] hover:bg-muted"
-                    onClick={exportCsv}
-                  >
-                    Export CSV
-                  </button>
-                  <button
-                    type="button"
-                    className="block w-full px-3 py-1.5 text-left text-[13px] hover:bg-muted"
-                    onClick={() => {
-                      setExportOpen(false);
-                      window.print();
-                    }}
-                  >
-                    Export PDF
-                  </button>
-                </div>
-              ) : null}
-            </div>
-            <Button size="sm" variant="outline" onClick={() => window.print()}>
-              <Printer className="h-4 w-4" />
-              Print
-            </Button>
-          </div>
-        }
-      />
-
-      <p className="text-[12px] text-subtle-foreground">
-        {formatDate(from)} – {formatDate(to)}
-      </p>
-
-      <div className="no-print xl:hidden">
-        <select
-          className={cn(nativeSelectClass, "h-8")}
-          value={preset}
-          onChange={(event) => {
-            setPreset(event.target.value as RangePreset);
-            setPage(1);
-          }}
-          aria-label="Date range"
-        >
-          <option value="today">Today</option>
-          <option value="week">This week</option>
-          <option value="month">This month</option>
-          <option value="30">Last 30 days</option>
-          <option value="90">Last 3 months</option>
-          <option value="custom">Custom range</option>
-        </select>
-      </div>
-
-      <Surface className="no-print space-y-3 p-4 sm:p-4">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-[13px] font-medium text-foreground">Filters</p>
-          <div className="flex items-center gap-3">
-            {hasFilters ? (
-              <button
-                type="button"
-                className="text-[12px] font-medium text-muted-foreground hover:text-foreground"
-                onClick={clearFilters}
-              >
-                Clear filters
-              </button>
+            <select
+              className={cn(nativeSelectClass, "h-8 w-auto md:hidden")}
+              value={preset}
+              onChange={(event) => {
+                setPreset(event.target.value as RangePreset);
+                setPage(1);
+              }}
+              aria-label="Date range"
+            >
+              <option value="today">Today</option>
+              <option value="week">This week</option>
+              <option value="month">This month</option>
+              <option value="30">Last 30 days</option>
+              <option value="90">Last 3 months</option>
+              <option value="custom">Custom range</option>
+            </select>
+            {preset === "custom" ? (
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="date"
+                  className={cn(nativeSelectClass, "h-8 w-auto")}
+                  value={from}
+                  onChange={(event) => {
+                    setCustomFrom(event.target.value);
+                    setPage(1);
+                  }}
+                  aria-label="From"
+                />
+                <span className="text-sm text-subtle-foreground">to</span>
+                <input
+                  type="date"
+                  className={cn(nativeSelectClass, "h-8 w-auto")}
+                  value={to}
+                  onChange={(event) => {
+                    setCustomTo(event.target.value);
+                    setPage(1);
+                  }}
+                  aria-label="To"
+                />
+              </div>
             ) : null}
-            <button
-              type="button"
-              className="text-[12px] font-medium text-primary lg:hidden"
+          </div>
+          <div className="flex items-center gap-1.5">
+            {hasFilters ? (
+              <Button size="sm" variant="ghost" onClick={clearFilters}>
+                <X />
+                Clear
+              </Button>
+            ) : null}
+            <Button
+              size="sm"
+              variant={filtersOpen ? "secondary" : "outline"}
+              className="lg:hidden"
+              aria-expanded={filtersOpen}
               onClick={() => setFiltersOpen((open) => !open)}
             >
-              {filtersOpen ? "Hide" : "Show"}
-            </button>
+              <SlidersHorizontal />
+              Filters
+              {activeFilterCount ? (
+                <Badge variant="primary" className="ml-0.5 h-4 px-1.5 text-2xs">
+                  {activeFilterCount}
+                </Badge>
+              ) : null}
+            </Button>
           </div>
         </div>
         <div className={cn("lg:block", filtersOpen ? "block" : "hidden")}>
@@ -585,113 +636,104 @@ export default function ReportsPage() {
       </Surface>
 
       {reports.isLoading ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
-        </div>
+        <ReportsSkeleton />
       ) : reports.isError ? (
-        <p className="text-sm text-destructive">{reports.error.message}</p>
+        <ErrorState
+          title="Couldn't load reports"
+          description={reports.error.message}
+          action={
+            <Button size="sm" variant="outline" onClick={() => void reports.refetch()}>
+              Retry
+            </Button>
+          }
+        />
       ) : !reports.data ? (
-        <EmptyState title="Unable to load reports" />
+        <EmptyState icon={BarChart3} title="Unable to load reports" />
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <KpiCard
-              label="Total projects"
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+            <StatCard
+              label="Projects"
               value={reports.data.projectPerformance.total}
-              icon={<FolderKanban className="h-4 w-4" />}
+              icon={FolderKanban}
+              tone="primary"
               hint="in this range"
             />
-            <KpiCard
+            <StatCard
               label="Total tasks"
               value={totalTasks}
-              icon={<ClipboardList className="h-4 w-4" />}
-              change={changeOf(totalTasks, prevTotal)}
+              icon={ClipboardList}
+              tone="info"
+              delta={deltaOf(changeOf(totalTasks, prevTotal))}
               hint="vs previous period"
             />
-            <KpiCard
-              label="Completed tasks"
+            <StatCard
+              label="Completed"
               value={completed}
-              icon={<CheckCircle2 className="h-4 w-4" />}
-              change={changeOf(
-                completed,
-                previous.data?.completion.completed ?? 0,
+              icon={CheckCircle2}
+              tone="success"
+              delta={deltaOf(
+                changeOf(completed, previous.data?.completion.completed ?? 0),
               )}
             />
-            <KpiCard
+            <StatCard
               label="In progress"
               value={inProgress}
-              icon={<Loader2 className="h-4 w-4" />}
-              change={changeOf(inProgress, prevByStatus.IN_PROGRESS ?? 0)}
+              icon={Timer}
+              tone="primary"
+              delta={deltaOf(changeOf(inProgress, prevByStatus.IN_PROGRESS ?? 0))}
             />
-            <KpiCard
-              label="Pending review"
+            <StatCard
+              label="In review"
               value={inReview}
-              change={changeOf(inReview, prevByStatus.IN_REVIEW ?? 0)}
+              icon={Eye}
+              tone="warning"
+              delta={deltaOf(changeOf(inReview, prevByStatus.IN_REVIEW ?? 0))}
             />
-            <KpiCard
-              label="Overdue tasks"
+            <StatCard
+              label="Overdue"
               value={overdue}
-              icon={<AlertTriangle className="h-4 w-4" />}
-              change={changeOf(overdue, previous.data?.overdue.count ?? 0)}
+              icon={AlertTriangle}
+              tone={overdue > 0 ? "danger" : "default"}
+              delta={deltaOf(changeOf(overdue, previous.data?.overdue.count ?? 0))}
+              invertDelta
             />
           </div>
 
-          <AiNarrativeCard from={from} to={to} />
-
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-            <Surface>
-              <h2 className="text-[15px] font-bold tracking-[-0.02em] text-foreground">
-                Task overview
-              </h2>
-              <p className="mt-0.5 text-[12px] text-muted-foreground">
-                Status mix from live workspace tasks.
-              </p>
+          <div className="grid gap-4 lg:grid-cols-5">
+            <ChartCard
+              className="lg:col-span-2"
+              title="Status breakdown"
+              description="Status mix from live workspace tasks."
+            >
               {donutTotal === 0 ? (
-                <EmptyState title="No tasks in this range" />
+                <EmptyState compact icon={PieChart} title="No tasks in this range" />
               ) : (
-                <div className="mt-4 grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center">
+                <div className="flex flex-col items-center gap-6 sm:flex-row lg:flex-col xl:flex-row">
                   <DonutChart total={donutTotal} slices={slices} />
-                  <div className="space-y-2.5">
-                    {slices.map((slice) => {
-                      const pct = donutTotal
+                  <ChartLegend
+                    layout="stacked"
+                    className="w-full min-w-0 flex-1 text-sm"
+                    items={slices.map((slice) => ({
+                      label: slice.label,
+                      color: slice.color,
+                      value: slice.count,
+                      percent: donutTotal
                         ? Math.round((slice.count / donutTotal) * 100)
-                        : 0;
-                      return (
-                        <div key={slice.label}>
-                          <div className="mb-1 flex items-center justify-between text-[12px]">
-                            <span className="flex items-center gap-2 text-muted-foreground">
-                              <span
-                                className="h-2 w-2 rounded-full"
-                                style={{ background: slice.color }}
-                              />
-                              {slice.label}
-                            </span>
-                            <span className="tabular-nums text-foreground">
-                              {slice.count} · {pct}%
-                            </span>
-                          </div>
-                          <Meter value={pct} />
-                        </div>
-                      );
-                    })}
-                  </div>
+                        : 0,
+                    }))}
+                  />
                 </div>
               )}
-            </Surface>
+            </ChartCard>
 
-            <Surface>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <h2 className="text-[15px] font-bold tracking-[-0.02em] text-foreground">
-                    Task completion trend
-                  </h2>
-                  <p className="mt-0.5 text-[12px] text-muted-foreground">
-                    Created vs completed in the selected range.
-                  </p>
-                </div>
+            <ChartCard
+              className="lg:col-span-3"
+              title="Throughput"
+              description="Created vs completed in the selected range."
+              action={
                 <SegmentedControl
+                  label="Trend granularity"
                   value={grain}
                   onChange={setGrain}
                   options={[
@@ -700,68 +742,54 @@ export default function ReportsPage() {
                     { value: "monthly", label: "Monthly" },
                   ]}
                 />
-              </div>
+              }
+            >
               {(reports.data.trends ?? []).length === 0 ? (
-                <EmptyState title="No trend data yet" />
+                <EmptyState compact icon={TrendingUp} title="No trend data yet" />
               ) : (
-                <>
-                  <TrendChart
-                    labels={trendRows.map((row) => row.label)}
-                    series={[
-                      {
-                        label: "Created",
-                        values: trendRows.map((row) => row.created),
-                        color: "var(--chart-1)",
-                      },
-                      {
-                        label: "Completed",
-                        values: trendRows.map((row) => row.completed),
-                        color: "var(--success)",
-                      },
-                    ]}
-                  />
-                  <div className="mt-2 flex gap-4 text-[12px] text-muted-foreground">
-                    <span className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-primary" /> Created
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-success" />{" "}
-                      Completed
-                    </span>
-                  </div>
-                </>
+                <TrendChart
+                  variant={trendRows.length <= 16 ? "bar" : "line"}
+                  labels={trendRows.map((row) => row.label)}
+                  series={[
+                    {
+                      label: "Created",
+                      values: trendRows.map((row) => row.created),
+                      color: "var(--chart-1)",
+                    },
+                    {
+                      label: "Completed",
+                      values: trendRows.map((row) => row.completed),
+                      color: "var(--success)",
+                    },
+                  ]}
+                />
               )}
-            </Surface>
+            </ChartCard>
           </div>
 
           <section className="space-y-3">
-            <div className="flex items-end justify-between gap-3">
-              <div>
-                <h2 className="text-[15px] font-bold tracking-[-0.02em] text-foreground">
-                  Project performance
-                </h2>
-                <p className="text-[12px] text-muted-foreground">
-                  Completion and health by project.
-                </p>
-              </div>
-            </div>
-            {reports.data.projectPerformance.items.length === 0 ? (
-              <EmptyState title="No project data in this range" />
-            ) : (
-              <ListPanel className="overflow-x-auto">
-                <table className="w-full min-w-[720px] text-left text-[13px]">
-                  <thead className="border-b border-border text-[11px] font-medium uppercase tracking-wide text-subtle-foreground">
-                    <tr>
-                      <th className="px-4 py-3">Project</th>
-                      <th className="px-3 py-3">Total</th>
-                      <th className="px-3 py-3">Done</th>
-                      <th className="px-3 py-3">Open</th>
-                      <th className="px-3 py-3">Overdue</th>
-                      <th className="px-3 py-3">Progress</th>
-                      <th className="px-4 py-3">Health</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
+            <ListPanel>
+              <PanelHeader
+                title="By project"
+                description="Completion and health by project."
+                icon={FolderKanban}
+              />
+              {reports.data.projectPerformance.items.length === 0 ? (
+                <EmptyState compact icon={FolderKanban} title="No project data in this range" />
+              ) : (
+                <Table className="min-w-[680px]">
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead>Project</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                      <TableHead className="text-right">Done</TableHead>
+                      <TableHead className="text-right">Open</TableHead>
+                      <TableHead className="text-right">Overdue</TableHead>
+                      <TableHead className="w-48">Progress</TableHead>
+                      <TableHead>Health</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {reports.data.projectPerformance.items.map((project) => {
                       const health = projectHealth(
                         project.completed,
@@ -770,56 +798,63 @@ export default function ReportsPage() {
                       );
                       const pct = Math.round(project.completionRate * 100);
                       return (
-                        <tr key={project.projectId ?? "none"} className="hover:bg-muted">
-                          <td className="px-4 py-3">
+                        <TableRow key={project.projectId ?? "none"}>
+                          <TableCell>
                             {project.projectId ? (
                               <Link
                                 href={`/app/projects/${project.projectId}`}
-                                className="font-medium text-foreground hover:text-primary"
+                                className="rounded-sm font-medium text-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                               >
                                 {project.name}
                               </Link>
                             ) : (
-                              <span className="font-medium">{project.name}</span>
+                              <span className="font-medium text-foreground">{project.name}</span>
                             )}
-                          </td>
-                          <td className="px-3 py-3 tabular-nums text-muted-foreground">
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground tabular">
                             {project.total}
-                          </td>
-                          <td className="px-3 py-3 tabular-nums text-muted-foreground">
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground tabular">
                             {project.completed}
-                          </td>
-                          <td className="px-3 py-3 tabular-nums text-muted-foreground">
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground tabular">
                             {project.open}
-                          </td>
-                          <td className="px-3 py-3 tabular-nums text-muted-foreground">
+                          </TableCell>
+                          <TableCell
+                            className={cn(
+                              "text-right tabular",
+                              project.overdue > 0
+                                ? "font-medium text-danger-soft-foreground"
+                                : "text-muted-foreground",
+                            )}
+                          >
                             {project.overdue}
-                          </td>
-                          <td className="px-3 py-3">
-                            <div className="flex items-center gap-2">
-                              <Meter className="w-24" value={pct} />
-                              <span className="tabular-nums text-muted-foreground">
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2.5">
+                              <Meter
+                                className="h-2 flex-1"
+                                value={pct}
+                                tone={pct >= 100 ? "success" : "primary"}
+                                label={`${project.name} ${pct}% complete`}
+                              />
+                              <span className="w-9 text-right text-sm text-muted-foreground tabular">
                                 {pct}%
                               </span>
                             </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span
-                              className={cn(
-                                "rounded-md px-2 py-0.5 text-[11px] font-medium",
-                                health.className,
-                              )}
-                            >
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={health.variant} dot>
                               {health.label}
-                            </span>
-                          </td>
-                        </tr>
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
                       );
                     })}
-                  </tbody>
-                </table>
-              </ListPanel>
-            )}
+                  </TableBody>
+                </Table>
+              )}
+            </ListPanel>
             <PageControls
               page={page}
               pageCount={Math.max(
@@ -830,199 +865,246 @@ export default function ReportsPage() {
             />
           </section>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Surface>
-              <h2 className="text-[15px] font-bold tracking-[-0.02em] text-foreground">
-                Team performance
-              </h2>
-                <p className="mt-0.5 text-[12px] text-muted-foreground">
-                  Open load and capacity from live assignments.
-                </p>
-                {teamUsers.length === 0 ? (
-                  <EmptyState title="No team workload in this view" />
-                ) : (
-                  <div className="mt-4 space-y-3">
-                    {teamUsers.slice(0, 3).map((member, index) => (
-                      <div
-                        key={member.userId}
-                        className="flex items-center gap-3 rounded-lg bg-muted px-3 py-2.5"
-                      >
-                        <span className="w-5 text-[12px] font-semibold text-subtle-foreground">
-                          {index + 1}
-                        </span>
-                        <PersonAvatar name={member.name} size="sm" />
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[13px] font-medium">
-                            {member.name}
-                          </p>
-                          <p className="text-[12px] text-muted-foreground">
-                            {member.openTaskCount} open ·{" "}
-                            {member.weekDeadlineCount} due this week
-                          </p>
-                        </div>
-                        <span className="text-[12px] tabular-nums text-muted-foreground">
-                          {Math.round(member.utilization * 100)}% load
-                        </span>
-                      </div>
-                    ))}
-                    <div className="overflow-x-auto">
-                      <table className="w-full min-w-[480px] text-left text-[13px]">
-                        <thead className="text-[11px] uppercase tracking-wide text-subtle-foreground">
-                          <tr>
-                            <th className="py-2">Member</th>
-                            <th>Open</th>
-                            <th>Due soon</th>
-                            <th>Load</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {teamUsers.map((member) => (
-                            <tr key={member.userId} className="border-t border-muted">
-                              <td className="py-2">
-                                <div className="flex items-center gap-2">
-                                  <PersonAvatar name={member.name} size="sm" />
-                                  {member.name}
-                                </div>
-                              </td>
-                              <td className="tabular-nums text-muted-foreground">
-                                {member.openTaskCount}
-                              </td>
-                              <td className="tabular-nums text-muted-foreground">
-                                {member.weekDeadlineCount}
-                              </td>
-                              <td>
-                                <div className="flex items-center gap-2">
-                                  <Meter
-                                    className="w-16"
-                                    value={Math.round(member.utilization * 100)}
-                                    danger={member.overloaded}
-                                  />
-                                  {member.overloaded ? (
-                                    <span className="text-[11px] text-danger">
-                                      High
-                                    </span>
-                                  ) : null}
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-              </Surface>
+          <div className="grid gap-4 items-start lg:grid-cols-5">
+            <ListPanel className="lg:col-span-3">
+              <PanelHeader
+                title="By assignee"
+                description="Open load and capacity from live assignments."
+                icon={Users}
+              />
+              {teamUsers.length === 0 ? (
+                <EmptyState compact icon={Users} title="No team workload in this view" />
+              ) : (
+                <Table className="min-w-[480px]">
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead>Member</TableHead>
+                      <TableHead className="text-right">Open</TableHead>
+                      <TableHead className="text-right">Due soon</TableHead>
+                      <TableHead className="w-40">Load</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {teamUsers.map((member, index) => {
+                      const load = Math.round(member.utilization * 100);
+                      const tone = utilizationTone(load, member.overloaded);
+                      return (
+                        <TableRow key={member.userId}>
+                          <TableCell>
+                            <div className="flex min-w-0 items-center gap-2.5">
+                              <span
+                                className={cn(
+                                  "w-4 shrink-0 text-center text-xs font-medium tabular",
+                                  index < 3 ? "text-foreground" : "text-subtle-foreground",
+                                )}
+                              >
+                                {index + 1}
+                              </span>
+                              <PersonAvatar name={member.name} size="sm" />
+                              <span className="truncate font-medium text-foreground">
+                                {member.name}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground tabular">
+                            {member.openTaskCount}
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground tabular">
+                            {member.weekDeadlineCount}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2.5">
+                              <Meter
+                                className="h-2 flex-1"
+                                value={load}
+                                tone={tone}
+                                danger={member.overloaded}
+                                label={`${member.name} load ${load}%`}
+                              />
+                              <span
+                                className={cn(
+                                  "w-10 text-right text-sm tabular",
+                                  member.overloaded
+                                    ? "font-medium text-danger-soft-foreground"
+                                    : "text-muted-foreground",
+                                )}
+                              >
+                                {load}%
+                              </span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </ListPanel>
 
-            <Surface>
-              <h2 className="text-[15px] font-bold tracking-[-0.02em] text-foreground">
-                My productivity
-              </h2>
-              <p className="mt-0.5 text-[12px] text-muted-foreground">
-                Your work for today, {user.data?.name?.split(" ")[0] ?? "you"}.
-              </p>
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-[22px] font-semibold">{myAssigned}</p>
-                  <p className="text-[12px] text-muted-foreground">Assigned</p>
+            <div className="space-y-4 lg:col-span-2">
+              <ChartCard title="By priority" description="Tasks in range by priority.">
+                {priorityTotal === 0 ? (
+                  <EmptyState compact icon={BarChart3} title="No priority data" />
+                ) : (
+                  <BarList items={priorityItems} total={priorityTotal} />
+                )}
+              </ChartCard>
+
+              <ChartCard
+                title="My productivity"
+                description={`Your work for today, ${user.data?.name?.split(" ")[0] ?? "you"}.`}
+              >
+                <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {[
+                    { label: "Assigned", value: myAssigned },
+                    { label: "Completed", value: myCompleted.length },
+                    { label: "Pending", value: myOpen.length },
+                    { label: "Overdue", value: myOverdue.length, danger: myOverdue.length > 0 },
+                  ].map((item) => (
+                    <div key={item.label} className="rounded-lg bg-muted/60 px-2.5 py-2">
+                      <dd
+                        className={cn(
+                          "font-heading text-xl font-semibold tracking-[-0.02em] tabular",
+                          item.danger ? "text-danger-soft-foreground" : "text-foreground",
+                        )}
+                      >
+                        {item.value}
+                      </dd>
+                      <dt className="truncate text-2xs text-muted-foreground">{item.label}</dt>
+                    </div>
+                  ))}
+                </dl>
+                <div className="mt-4 space-y-1.5">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Completion rate</span>
+                    <span className="font-medium text-foreground tabular">{myRate}%</span>
+                  </div>
+                  <Progress
+                    value={myRate}
+                    tone={myRate >= 100 ? "success" : "primary"}
+                    aria-label="My completion rate"
+                  />
                 </div>
-                <div>
-                  <p className="text-[22px] font-semibold">{myCompleted.length}</p>
-                  <p className="text-[12px] text-muted-foreground">Completed</p>
-                </div>
-                <div>
-                  <p className="text-[22px] font-semibold">{myOpen.length}</p>
-                  <p className="text-[12px] text-muted-foreground">Pending</p>
-                </div>
-                <div>
-                  <p className="text-[22px] font-semibold">{myOverdue.length}</p>
-                  <p className="text-[12px] text-muted-foreground">Overdue</p>
-                </div>
-              </div>
-              <p className="mt-4 text-[12px] text-muted-foreground">Completion rate</p>
-              <Meter className="mt-1.5" value={myRate} />
-              <p className="mt-1 text-[13px] font-medium">{myRate}%</p>
-              <p className="mt-3 text-[12px] text-subtle-foreground">
-                Average completion time is not tracked in this workspace yet.
-              </p>
-              {dashboard.data ? (
-                <div className="mt-3 text-[12px] text-muted-foreground">
-                  Workspace snapshot: {dashboard.data.totals.completed} completed
-                  · {dashboard.data.totals.overdue} overdue
-                </div>
-              ) : null}
-            </Surface>
+                <p className="mt-3 text-xs text-subtle-foreground">
+                  Average completion time is not tracked in this workspace yet.
+                </p>
+                {dashboard.data ? (
+                  <p className="mt-1 text-xs text-muted-foreground tabular">
+                    Workspace snapshot: {dashboard.data.totals.completed} completed ·{" "}
+                    {dashboard.data.totals.overdue} overdue
+                  </p>
+                ) : null}
+              </ChartCard>
+            </div>
           </div>
 
-          <section>
-            <h2 className="text-[15px] font-bold tracking-[-0.02em] text-foreground">
-              Attention required
-            </h2>
-            <p className="mt-0.5 text-[12px] text-muted-foreground">
-              Overdue, returned, and waiting for review.
-            </p>
+          <AiNarrativeCard from={from} to={to} />
+
+          <ListPanel>
+            <PanelHeader
+              title="Attention required"
+              description="Overdue, returned, and waiting for review."
+              icon={AlertTriangle}
+            />
             {attention.length === 0 && dueSoon.length === 0 ? (
-              <EmptyState title="Nothing needs attention" />
+              <EmptyState compact icon={CheckCircle2} title="Nothing needs attention" />
             ) : (
-              <ListPanel className="mt-3 overflow-x-auto">
-                <table className="w-full min-w-[720px] text-left text-[13px]">
-                  <thead className="border-b border-border text-[11px] uppercase tracking-wide text-subtle-foreground">
-                    <tr>
-                      <th className="px-4 py-3">Task</th>
-                      <th className="px-3 py-3">Project</th>
-                      <th className="px-3 py-3">Assignee</th>
-                      <th className="px-3 py-3">Due</th>
-                      <th className="px-3 py-3">Status</th>
-                      <th className="px-4 py-3">Priority</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {attention.map((task) => (
-                      <tr key={task.id} className="hover:bg-muted">
-                        <td className="px-4 py-3">
-                          <Link
-                            href={`/app/tasks/${task.id}`}
-                            className="font-medium hover:text-primary"
-                          >
-                            {task.title}
-                          </Link>
-                        </td>
-                        <td className="px-3 py-3 text-muted-foreground">
-                          {task.project?.name ?? "—"}
-                        </td>
-                        <td className="px-3 py-3 text-muted-foreground">
-                          {(task.assignees ?? []).length
-                            ? (task.assignees ?? [])
-                                .map((person) => person.name)
-                                .join(", ")
-                            : (task.assignee?.name ?? "Unassigned")}
-                        </td>
-                        <td className="px-3 py-3 text-muted-foreground">
-                          {formatDate(task.dueDate)}
-                        </td>
-                        <td className="px-3 py-3">
-                          <StatusBadge value={task.status} />
-                        </td>
-                        <td className="px-4 py-3">
-                          <StatusBadge value={task.priority} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <>
+                {attention.length ? (
+                  <Table className="min-w-[720px]">
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead>Task</TableHead>
+                        <TableHead>Project</TableHead>
+                        <TableHead>Assignee</TableHead>
+                        <TableHead>Due</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Priority</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {attention.map((task) => {
+                        const people = (task.assignees ?? []).length
+                          ? (task.assignees ?? [])
+                          : task.assignee
+                            ? [task.assignee]
+                            : [];
+                        const late =
+                          task.status === "OVERDUE" ||
+                          Boolean(
+                            task.dueDate &&
+                              task.status !== "COMPLETED" &&
+                              task.dueDate.slice(0, 10) < today,
+                          );
+                        return (
+                          <TableRow key={task.id}>
+                            <TableCell className="max-w-72">
+                              <Link
+                                href={`/app/tasks/${task.id}`}
+                                className="block truncate rounded-sm font-medium text-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              >
+                                {task.title}
+                              </Link>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {task.project?.name ?? "—"}
+                            </TableCell>
+                            <TableCell>
+                              {people.length ? (
+                                <div
+                                  className="flex items-center gap-2"
+                                  title={people.map((person) => person.name).join(", ")}
+                                >
+                                  <AvatarStack people={people} max={3} size="xs" />
+                                  <span className="max-w-32 truncate text-sm text-muted-foreground">
+                                    {people.length === 1
+                                      ? people[0].name
+                                      : `${people.length} people`}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-sm text-subtle-foreground">Unassigned</span>
+                              )}
+                            </TableCell>
+                            <TableCell
+                              className={cn(
+                                "whitespace-nowrap text-sm tabular",
+                                late
+                                  ? "font-medium text-danger-soft-foreground"
+                                  : "text-muted-foreground",
+                              )}
+                            >
+                              {formatDate(task.dueDate)}
+                            </TableCell>
+                            <TableCell>
+                              <StatusBadge value={task.status} />
+                            </TableCell>
+                            <TableCell>
+                              <PriorityBadge value={task.priority} />
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                ) : null}
                 {dueSoon.length ? (
-                  <div className="border-t border-border px-4 py-3">
-                    <p className="text-[12px] font-medium text-muted-foreground">
+                  <div className="border-t border-border px-4 py-3 sm:px-5">
+                    <p className="text-2xs font-medium uppercase tracking-[0.06em] text-muted-foreground">
                       Due soon
                     </p>
-                    <ul className="mt-2 space-y-1">
+                    <ul className="mt-2 grid gap-1 sm:grid-cols-2">
                       {dueSoon.map((item) => (
                         <li key={item.id}>
                           <Link
                             href={item.href}
-                            className="text-[13px] hover:text-primary"
+                            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors duration-150 hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           >
-                            {item.title}
-                            <span className="ml-2 text-subtle-foreground">
+                            <CalendarClock className="size-3.5 shrink-0 text-muted-foreground" />
+                            <span className="min-w-0 flex-1 truncate text-foreground">
+                              {item.title}
+                            </span>
+                            <span className="shrink-0 text-xs text-muted-foreground tabular">
                               {formatDate(item.dueDate)}
                             </span>
                           </Link>
@@ -1031,32 +1113,32 @@ export default function ReportsPage() {
                     </ul>
                   </div>
                 ) : null}
-              </ListPanel>
+              </>
             )}
-          </section>
+          </ListPanel>
 
-          <Surface>
-            <h2 className="text-[15px] font-bold tracking-[-0.02em] text-foreground">
-              Recent activity
-            </h2>
-            <p className="mt-0.5 text-[12px] text-muted-foreground">
-              Completions, submissions, assignments, and related changes.
-            </p>
+          <ListPanel>
+            <PanelHeader
+              title="Recent activity"
+              description="Completions, submissions, assignments, and related changes."
+              icon={Activity}
+            />
             {recent.length === 0 ? (
-              <EmptyState title="No recent activity" />
+              <EmptyState compact icon={Activity} title="No recent activity" />
             ) : (
-              <ol className="mt-3 divide-y divide-muted">
+              <ol className="divide-y divide-border">
                 {recent.map((item) => {
                   const href = activityHref(item.entityType, item.entityId);
                   const body = (
-                    <div className="flex items-start justify-between gap-3 py-2.5">
-                      <p className="text-[13px] text-foreground">
-                        <span className="font-medium">
+                    <div className="flex items-start gap-3 px-4 py-3 sm:px-5">
+                      <PersonAvatar name={item.actor?.name ?? "Someone"} size="sm" />
+                      <p className="min-w-0 flex-1 text-sm text-muted-foreground">
+                        <span className="font-medium text-foreground">
                           {item.actor?.name ?? "Someone"}
                         </span>{" "}
                         {item.title}
                       </p>
-                      <span className="shrink-0 text-[12px] text-subtle-foreground">
+                      <span className="shrink-0 text-xs text-subtle-foreground">
                         {formatRelativeTime(item.createdAt)}
                       </span>
                     </div>
@@ -1064,7 +1146,10 @@ export default function ReportsPage() {
                   return (
                     <li key={item.id}>
                       {href ? (
-                        <Link href={href} className="block hover:text-primary">
+                        <Link
+                          href={href}
+                          className="block transition-colors duration-150 hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                        >
                           {body}
                         </Link>
                       ) : (
@@ -1075,9 +1160,129 @@ export default function ReportsPage() {
                 })}
               </ol>
             )}
-          </Surface>
+          </ListPanel>
         </>
       )}
     </PageShell>
+  );
+}
+
+const PRIORITY_COLORS: Record<string, string> = {
+  URGENT: "var(--danger)",
+  HIGH: "var(--warning)",
+  MEDIUM: "var(--info)",
+  LOW: "var(--chart-6)",
+};
+
+/** Signed percentage for StatCard's `delta` prop. */
+function deltaOf(change: { percent: number; up: boolean } | null) {
+  if (!change) return null;
+  return change.up ? change.percent : -change.percent;
+}
+
+function PanelHeader({
+  title,
+  description,
+  icon: Icon,
+  action,
+}: {
+  title: string;
+  description?: string;
+  icon?: typeof Activity;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3 sm:px-5">
+      <div className="flex min-w-0 items-start gap-2.5">
+        {Icon ? (
+          <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" strokeWidth={2} />
+        ) : null}
+        <div className="min-w-0">
+          <h2 className="text-md font-semibold tracking-[-0.01em] text-foreground">{title}</h2>
+          {description ? (
+            <p className="text-sm text-muted-foreground">{description}</p>
+          ) : null}
+        </div>
+      </div>
+      {action}
+    </div>
+  );
+}
+
+function ChartCard({
+  title,
+  description,
+  action,
+  className,
+  children,
+}: {
+  title: string;
+  description?: string;
+  action?: ReactNode;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <Surface className={cn("flex flex-col", className)}>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-md font-semibold tracking-[-0.01em] text-foreground">{title}</h2>
+          {description ? (
+            <p className="text-sm text-muted-foreground">{description}</p>
+          ) : null}
+        </div>
+        {action}
+      </div>
+      <div className="flex-1">{children}</div>
+    </Surface>
+  );
+}
+
+function ReportsSkeleton() {
+  return (
+    <div role="status" aria-label="Loading reports" className="space-y-6">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div key={index} className="space-y-3 rounded-xl border border-border bg-card p-4 sm:p-5">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-3 w-16" />
+              <Skeleton className="size-8 rounded-lg" />
+            </div>
+            <Skeleton className="h-7 w-12" />
+          </div>
+        ))}
+      </div>
+      <div className="grid gap-4 lg:grid-cols-5">
+        <div className="space-y-4 rounded-xl border border-border bg-card p-4 sm:p-5 lg:col-span-2">
+          <Skeleton className="h-4 w-32" />
+          <div className="flex items-center gap-6">
+            <Skeleton className="size-40 rounded-full" />
+            <div className="flex-1 space-y-2.5">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <Skeleton key={index} className="h-3 w-full" />
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="space-y-4 rounded-xl border border-border bg-card p-4 sm:p-5 lg:col-span-3">
+          <Skeleton className="h-4 w-28" />
+          <div className="flex h-48 items-end gap-2">
+            {[40, 65, 30, 80, 55, 70, 45, 90, 60, 35].map((height, index) => (
+              <Skeleton
+                key={index}
+                className="flex-1 rounded-b-none"
+                style={{ height: `${height}%` }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="space-y-3 rounded-xl border border-border bg-card p-4 sm:p-5">
+        <Skeleton className="h-4 w-28" />
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Skeleton key={index} className="h-8 w-full" />
+        ))}
+      </div>
+    </div>
   );
 }
