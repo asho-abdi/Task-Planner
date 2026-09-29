@@ -1,12 +1,16 @@
 import * as React from "react";
-import { cn } from "@/lib/utils";
+import { cn, fieldBaseClass } from "@/lib/utils";
+
+export { fieldBaseClass };
 
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   return (
     <input
       type={type}
+      data-slot="input"
       className={cn(
-        "flex h-10 w-full rounded-lg border border-input bg-card px-3 text-[14px] font-medium text-foreground shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:font-normal placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50",
+        fieldBaseClass,
+        "flex h-9 px-3 file:mr-3 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground",
         className,
       )}
       {...props}
@@ -14,4 +18,14 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   );
 }
 
-export { Input };
+function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
+  return (
+    <textarea
+      data-slot="textarea"
+      className={cn(fieldBaseClass, "flex min-h-24 px-3 py-2 leading-relaxed", className)}
+      {...props}
+    />
+  );
+}
+
+export { Input, Textarea };

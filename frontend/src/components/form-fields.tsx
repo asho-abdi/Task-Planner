@@ -1,3 +1,4 @@
+import { Paperclip } from "lucide-react";
 import type { ChangeEvent, ReactNode } from "react";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -64,11 +65,12 @@ export function OptionalAttachments({
           id={inputId}
           type="file"
           multiple
-          className="sr-only"
+          className="peer sr-only"
           disabled={disabled}
           onChange={addFiles}
         />
-        <span className="inline-flex h-9 cursor-pointer items-center rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground hover:bg-secondary">
+        <span className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md border border-dashed border-border-strong bg-card px-3 text-sm font-medium text-foreground transition-colors hover:border-primary hover:bg-primary-soft hover:text-primary-soft-foreground peer-focus-visible:ring-2 peer-focus-visible:ring-ring">
+          <Paperclip className="size-3.5" />
           Choose files
         </span>
       </label>
@@ -77,11 +79,11 @@ export function OptionalAttachments({
           {files.map((file, index) => (
             <li
               key={`${file.name}-${file.size}-${index}`}
-              className="flex items-center justify-between gap-3 rounded-lg border border-[#E5E7EB] px-3 py-2 text-sm"
+              className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2 text-sm"
             >
               <span className="min-w-0 truncate">
                 {file.name}
-                <span className="ml-2 text-xs text-[#64748B]">
+                <span className="ml-2 text-xs text-muted-foreground">
                   {file.size < 1024
                     ? `${file.size} B`
                     : `${Math.round(file.size / 1024)} KB`}
@@ -89,7 +91,7 @@ export function OptionalAttachments({
               </span>
               <button
                 type="button"
-                className="shrink-0 text-xs font-medium text-[#64748B] hover:text-[#172033]"
+                className="shrink-0 text-xs font-medium text-muted-foreground hover:text-foreground"
                 disabled={disabled}
                 onClick={() =>
                   onChange(files.filter((_, itemIndex) => itemIndex !== index))

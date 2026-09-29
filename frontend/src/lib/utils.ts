@@ -19,11 +19,20 @@ export function readImageAsDataUrl(file: File, maxBytes = 350_000) {
   });
 }
 
-export const nativeSelectClass =
-  "flex h-10 w-full rounded-lg border border-input bg-card px-3 text-[14px] font-medium shadow-sm transition-colors focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50";
+/** Shared field chrome for inputs, native selects and textareas. */
+export const fieldBaseClass = [
+  "w-full rounded-md border border-input bg-card text-base text-foreground shadow-xs",
+  "transition-[border-color,box-shadow] duration-150",
+  "placeholder:text-subtle-foreground",
+  "hover:border-border-strong",
+  "focus-visible:border-ring focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/20",
+  "aria-invalid:border-danger aria-invalid:focus-visible:ring-danger/20",
+  "disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-60",
+].join(" ");
 
-export const nativeTextareaClass =
-  "flex min-h-24 w-full rounded-lg border border-input bg-card px-3 py-2 text-[14px] font-medium leading-[1.5] shadow-sm placeholder:font-normal placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50";
+export const nativeSelectClass = `${fieldBaseClass} flex h-9 px-2.5`;
+
+export const nativeTextareaClass = `${fieldBaseClass} flex min-h-24 px-3 py-2 leading-relaxed`;
 
 export function toDateInputValue(value: string | null | undefined) {
   return value ? value.slice(0, 10) : "";
