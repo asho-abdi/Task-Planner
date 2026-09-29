@@ -6,6 +6,7 @@ import { OptionalAttachments } from "@/components/form-fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "@/components/ui/toast";
 import { useCreateProject } from "@/features/projects/hooks";
 import { PRIORITIES } from "@/features/projects/types";
 import { useTeams, useUploadFile } from "@/features/collaboration/hooks";
@@ -16,6 +17,10 @@ type CreateProjectDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
+
+function priorityLabel(value: string) {
+  return `${value[0]}${value.slice(1).toLowerCase()}`;
+}
 
 export function CreateProjectDialog({
   open,
@@ -31,6 +36,7 @@ export function CreateProjectDialog({
   const upload = useUploadFile();
   const workspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
   const teams = useTeams(open ? workspaceId : null);
+  const busy = createProject.isPending || upload.isPending;
 
   function handleOpenChange(next: boolean) {
     if (!next) {
@@ -60,6 +66,7 @@ export function CreateProjectDialog({
           attach: { projectId: created.id },
         });
       }
+      toast.success("Project created", { description: created.name });
       handleOpenChange(false);
     } catch {
       // Error is shown from the mutation.
@@ -84,11 +91,10 @@ export function CreateProjectDialog({
           <Button
             type="submit"
             form="create-project-form"
-            disabled={
-              !name.trim() || createProject.isPending || upload.isPending
-            }
+            disabled={!name.trim()}
+            loading={busy}
           >
-            {createProject.isPending || upload.isPending ? "Creating…" : "Create"}
+            Create project
           </Button>
         </>
       }
@@ -98,15 +104,27 @@ export function CreateProjectDialog({
         className="space-y-4"
         onSubmit={handleSubmit}
       >
-        <div className="space-y-2">
-          <Label htmlFor="project-name">Name</Label>
-          <Input
-            id="project-name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Website redesign"
-            autoFocus
-          />
+        <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-3">
+          <div className="space-y-2">
+            <Label htmlFor="project-icon">Icon</Label>
+            <Input
+              id="project-icon"
+              value={icon}
+              className="text-center"
+              onChange={(event) => setIcon(event.target.value)}
+              placeholder="📁"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="project-name">Name</Label>
+            <Input
+              id="project-name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="Website redesign"
+              autoFocus
+            />
+          </div>
         </div>
         <div className="space-y-2">
           <Label htmlFor="project-description">Description</Label>
@@ -118,16 +136,7 @@ export function CreateProjectDialog({
             placeholder="Optional"
           />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label htmlFor="project-icon">Icon</Label>
-            <Input
-              id="project-icon"
-              value={icon}
-              onChange={(event) => setIcon(event.target.value)}
-              placeholder="📁"
-            />
-          </div>
+        <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="project-team">Team</Label>
             <select
@@ -144,35 +153,37 @@ export function CreateProjectDialog({
               ))}
             </select>
           </div>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="project-priority">Priority</Label>
-          <select
-            id="project-priority"
-            className={nativeSelectClass}
-            value={priority}
-            onChange={(event) =>
-              setPriority(event.target.value as (typeof PRIORITIES)[number])
-            }
-          >
-            {PRIORITIES.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
+          <div className="space-y-2">
+            <Label htmlFor="project-priority">Priority</Label>
+            <select
+              id="project-priority"
+              className={nativeSelectClass}
+              value={priority}
+              onChange={(event) =>
+                setPriority(event.target.value as (typeof PRIORITIES)[number])
+              }
+            >
+              {PRIORITIES.map((item) => (
+                <option key={item} value={item}>
+                  {priorityLabel(item)}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
         <OptionalAttachments
           inputId="project-files"
           files={files}
           onChange={setFiles}
-          disabled={createProject.isPending || upload.isPending}
+          disabled={busy}
         />
         {createProject.error ? (
-          <p className="text-sm text-destructive">{createProject.error.message}</p>
+          <p className="text-sm text-danger-soft-foreground">
+            {createProject.error.message}
+          </p>
         ) : null}
         {upload.error ? (
-          <p className="text-sm text-destructive">{upload.error.message}</p>
+          <p className="text-sm text-danger-soft-foreground">{upload.error.message}</p>
         ) : null}
       </form>
     </CreateResourceDialog>

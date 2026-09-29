@@ -1,17 +1,30 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import {
+  FolderKanban,
+  LayoutGrid,
+  LayoutTemplate,
+  List,
+  Plus,
+  Search,
+  SearchX,
+  X,
+} from "lucide-react";
 import {
   EmptyState,
   ListPanel,
   PageHeader,
   PageShell,
+  SegmentedControl,
+  Surface,
 } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
+import { ErrorState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ProjectCard } from "@/features/projects/project-hub";
+import { SkeletonCards, SkeletonList } from "@/components/ui/skeleton";
+import { toast } from "@/components/ui/toast";
+import { ProjectCard, ProjectRow } from "@/features/projects/project-hub";
 import {
   useCreateFromTemplate,
   useProjectTemplates,
@@ -29,9 +42,12 @@ import { cn, nativeSelectClass } from "@/lib/utils";
 import { useUiStore } from "@/store/ui-store";
 import { useWorkspaceStore } from "@/store/workspace-store";
 
-function statusLabel(value: string) {
-  return value.replaceAll("_", " ").toLowerCase();
+function optionLabel(value: string) {
+  const label = value.replaceAll("_", " ").toLowerCase();
+  return label.charAt(0).toUpperCase() + label.slice(1);
 }
+
+type ViewMode = "grid" | "list";
 
 export default function ProjectsPage() {
   const workspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
@@ -40,6 +56,7 @@ export default function ProjectsPage() {
   const [status, setStatus] = useState<ProjectStatus | "">("");
   const [priority, setPriority] = useState<Priority | "">("");
   const [teamId, setTeamId] = useState("");
+  const [view, setView] = useState<ViewMode>("grid");
   const includeArchived = status === "ARCHIVED";
   const projects = useProjects(workspaceId, includeArchived);
   const teams = useTeams(workspaceId);
@@ -73,10 +90,18 @@ export default function ProjectsPage() {
   const hasFilters = Boolean(query.trim() || status || priority || teamId);
   const total = projects.data?.length ?? 0;
 
+  function clearFilters() {
+    setQuery("");
+    setStatus("");
+    setPriority("");
+    setTeamId("");
+  }
+
   return (
-    <PageShell>
+    <PageShell width="wide">
       <PageHeader
         title="Projects"
+        icon={FolderKanban}
         description="Work grouped by initiative."
         actions={
           canWrite ? (
@@ -84,11 +109,14 @@ export default function ProjectsPage() {
               <Button
                 variant="outline"
                 size="sm"
+                aria-expanded={templateOpen}
                 onClick={() => setTemplateOpen((value) => !value)}
               >
+                <LayoutTemplate />
                 From template
               </Button>
               <Button size="sm" onClick={() => setOpenCreateDialog("project")}>
+                <Plus />
                 New project
               </Button>
             </>
@@ -96,59 +124,82 @@ export default function ProjectsPage() {
         }
       />
       {canWrite && templateOpen ? (
-        <form
-          className="flex flex-col gap-2 sm:flex-row"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!templateId) return;
-            void createFromTemplate
-              .mutateAsync({
-                templateId,
-                name: templateName.trim() || undefined,
-              })
-              .then(() => {
-                setTemplateName("");
-              });
-          }}
-        >
-          <select
-            className={nativeSelectClass}
-            aria-label="Template"
-            value={templateId}
-            onChange={(event) => setTemplateId(event.target.value)}
+        <Surface className="animate-slide-up">
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div>
+              <p className="text-base font-medium text-foreground">
+                Start from a template
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Milestones and tasks are copied into a new project.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Close template picker"
+              onClick={() => setTemplateOpen(false)}
+            >
+              <X />
+            </Button>
+          </div>
+          <form
+            className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!templateId) return;
+              void createFromTemplate
+                .mutateAsync({
+                  templateId,
+                  name: templateName.trim() || undefined,
+                })
+                .then(() => {
+                  setTemplateName("");
+                  toast.success("Project created from template");
+                })
+                .catch(() => undefined);
+            }}
           >
-            <option value="">Choose a template</option>
-            {(templates.data ?? []).map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-                {item.builtin ? " (built-in)" : ""}
-              </option>
-            ))}
-          </select>
-          <Input
-            value={templateName}
-            onChange={(event) => setTemplateName(event.target.value)}
-            placeholder="Project name (optional)"
-          />
-          <Button
-            type="submit"
-            size="sm"
-            className="shrink-0 self-start sm:self-auto"
-            disabled={!templateId || createFromTemplate.isPending}
-          >
-            {createFromTemplate.isPending ? "Creating…" : "Create"}
-          </Button>
-        </form>
-      ) : null}
-      {createFromTemplate.error ? (
-        <p className="text-sm text-destructive">
-          {createFromTemplate.error.message}
-        </p>
+            <select
+              className={nativeSelectClass}
+              aria-label="Template"
+              value={templateId}
+              onChange={(event) => setTemplateId(event.target.value)}
+            >
+              <option value="">Choose a template</option>
+              {(templates.data ?? []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                  {item.builtin ? " (built-in)" : ""}
+                </option>
+              ))}
+            </select>
+            <Input
+              value={templateName}
+              onChange={(event) => setTemplateName(event.target.value)}
+              placeholder="Project name (optional)"
+              aria-label="Project name"
+            />
+            <Button
+              type="submit"
+              disabled={!templateId}
+              loading={createFromTemplate.isPending}
+            >
+              Create
+            </Button>
+          </form>
+          {createFromTemplate.error ? (
+            <p className="mt-2 text-sm text-danger-soft-foreground">
+              {createFromTemplate.error.message}
+            </p>
+          ) : null}
+        </Surface>
       ) : null}
 
       <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
-        <div className="relative min-w-0 lg:max-w-xs lg:flex-1">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-subtle-foreground" />
+        <div className="relative min-w-0 lg:w-72">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-subtle-foreground" />
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -157,108 +208,145 @@ export default function ProjectsPage() {
             aria-label="Search projects"
           />
         </div>
-        <select
-          className={cn(nativeSelectClass, "h-8 lg:max-w-[160px]")}
-          aria-label="Status"
-          value={status}
-          onChange={(event) =>
-            setStatus(event.target.value as ProjectStatus | "")
-          }
-        >
-          <option value="">Any status</option>
-          {PROJECT_STATUSES.map((item) => (
-            <option key={item} value={item}>
-              {statusLabel(item)}
-            </option>
-          ))}
-        </select>
-        <select
-          className={cn(nativeSelectClass, "h-8 lg:max-w-[140px]")}
-          aria-label="Priority"
-          value={priority}
-          onChange={(event) =>
-            setPriority(event.target.value as Priority | "")
-          }
-        >
-          <option value="">Any priority</option>
-          {PRIORITIES.map((item) => (
-            <option key={item} value={item}>
-              {statusLabel(item)}
-            </option>
-          ))}
-        </select>
-        <select
-          className={cn(nativeSelectClass, "h-8 lg:max-w-[180px]")}
-          aria-label="Team"
-          value={teamId}
-          onChange={(event) => setTeamId(event.target.value)}
-        >
-          <option value="">Any team</option>
-          {(teams.data ?? []).map((team) => (
-            <option key={team.id} value={team.id}>
-              {team.name}
-            </option>
-          ))}
-        </select>
-        {hasFilters ? (
-          <button
-            type="button"
-            className="text-[12px] font-medium text-muted-foreground hover:text-foreground lg:ml-auto"
-            onClick={() => {
-              setQuery("");
-              setStatus("");
-              setPriority("");
-              setTeamId("");
-            }}
+        <div className="grid grid-cols-3 gap-2 lg:flex lg:items-center">
+          <select
+            className={cn(nativeSelectClass, "h-8 min-w-0 lg:w-36")}
+            aria-label="Status"
+            value={status}
+            onChange={(event) =>
+              setStatus(event.target.value as ProjectStatus | "")
+            }
           >
+            <option value="">Any status</option>
+            {PROJECT_STATUSES.map((item) => (
+              <option key={item} value={item}>
+                {optionLabel(item)}
+              </option>
+            ))}
+          </select>
+          <select
+            className={cn(nativeSelectClass, "h-8 min-w-0 lg:w-36")}
+            aria-label="Priority"
+            value={priority}
+            onChange={(event) =>
+              setPriority(event.target.value as Priority | "")
+            }
+          >
+            <option value="">Any priority</option>
+            {PRIORITIES.map((item) => (
+              <option key={item} value={item}>
+                {optionLabel(item)}
+              </option>
+            ))}
+          </select>
+          <select
+            className={cn(nativeSelectClass, "h-8 min-w-0 lg:w-40")}
+            aria-label="Team"
+            value={teamId}
+            onChange={(event) => setTeamId(event.target.value)}
+          >
+            <option value="">Any team</option>
+            {(teams.data ?? []).map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        {hasFilters ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="self-start lg:self-auto"
+            onClick={clearFilters}
+          >
+            <X />
             Clear
-          </button>
+          </Button>
         ) : null}
+        <SegmentedControl
+          className="hidden sm:inline-flex lg:ml-auto"
+          label="Layout"
+          value={view}
+          onChange={setView}
+          options={[
+            { value: "grid", label: "Grid", icon: <LayoutGrid /> },
+            { value: "list", label: "List", icon: <List /> },
+          ]}
+        />
       </div>
 
       {projects.isLoading ? (
-        <Skeleton className="h-36 w-full" />
+        view === "grid" ? (
+          <SkeletonCards count={6} className="sm:grid-cols-2 lg:grid-cols-3" />
+        ) : (
+          <ListPanel>
+            <SkeletonList rows={6} />
+          </ListPanel>
+        )
       ) : projects.isError ? (
-        <p className="text-sm text-destructive">{projects.error.message}</p>
-      ) : total === 0 ? (
-        <EmptyState
-          title="No projects yet"
-          description="Create a project to group tasks and meetings."
+        <ErrorState
+          title="Couldn't load projects"
+          description={projects.error.message}
           action={
-            canWrite ? (
-              <Button size="sm" onClick={() => setOpenCreateDialog("project")}>
-                New project
-              </Button>
-            ) : undefined
-          }
-        />
-      ) : filtered.length === 0 ? (
-        <EmptyState
-          title="No matching projects"
-          description="Try another search or clear the filters."
-          action={
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                setQuery("");
-                setStatus("");
-                setPriority("");
-                setTeamId("");
-              }}
-            >
-              Clear filters
+            <Button size="sm" variant="outline" onClick={() => void projects.refetch()}>
+              Retry
             </Button>
           }
         />
+      ) : total === 0 ? (
+        <Surface className="p-0 sm:p-0">
+          <EmptyState
+            icon={FolderKanban}
+            title="No projects yet"
+            description="Create a project to group tasks and meetings."
+            action={
+              canWrite ? (
+                <Button size="sm" onClick={() => setOpenCreateDialog("project")}>
+                  <Plus />
+                  New project
+                </Button>
+              ) : undefined
+            }
+          />
+        </Surface>
+      ) : filtered.length === 0 ? (
+        <Surface className="p-0 sm:p-0">
+          <EmptyState
+            icon={SearchX}
+            title="No matching projects"
+            description="Try another search or clear the filters."
+            action={
+              <Button size="sm" variant="outline" onClick={clearFilters}>
+                Clear filters
+              </Button>
+            }
+          />
+        </Surface>
       ) : (
         <>
-          <ListPanel className="divide-y divide-border">
-            {filtered.map((project) => (
-              <ProjectCard key={project.id} project={project} />
-            ))}
-          </ListPanel>
-          <p className="text-[12px] text-muted-foreground">
+          {view === "grid" ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {filtered.map((project) => (
+                <ProjectCard key={project.id} project={project} />
+              ))}
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-4 sm:hidden">
+                {filtered.map((project) => (
+                  <ProjectCard key={project.id} project={project} />
+                ))}
+              </div>
+              <ListPanel className="hidden divide-y divide-border sm:block">
+                {filtered.map((project) => (
+                  <ProjectRow key={project.id} project={project} />
+                ))}
+              </ListPanel>
+            </>
+          )}
+          <p className="text-xs text-muted-foreground tabular">
             {filtered.length}
             {filtered.length !== total ? ` of ${total}` : ""}{" "}
             {filtered.length === 1 ? "project" : "projects"}

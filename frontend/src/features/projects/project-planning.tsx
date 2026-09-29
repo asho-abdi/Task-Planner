@@ -2,10 +2,24 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import {
+  CalendarDays,
+  Flag,
+  GanttChart,
+  ListChecks,
+  Lock,
+  NotebookPen,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { Progress, progressTone } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/components/ui/toast";
+import { Tooltip } from "@/components/ui/tooltip";
 import { EmptyState, Surface } from "@/components/page-header";
-import { Meter } from "@/features/insights/ui";
 import {
   useCreatePage,
   usePages,
@@ -49,65 +63,114 @@ export function ProjectMilestonesPanel({
       title: title.trim(),
       dueDate: fromDateInputValue(dueDate),
     });
+    toast.success("Milestone added");
     setTitle("");
     setDueDate("");
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {canWrite ? (
-        <Surface>
-          <form className="grid gap-3 sm:grid-cols-[1fr_auto_auto]" onSubmit={add}>
-            <Input
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              placeholder="Website Launch"
-            />
-            <Input
-              type="date"
-              value={dueDate}
-              onChange={(event) => setDueDate(event.target.value)}
-            />
-            <Button type="submit" disabled={createMilestone.isPending}>
-              Add milestone
-            </Button>
-          </form>
-        </Surface>
+        <form
+          className="grid gap-2 rounded-xl border border-dashed border-border-strong bg-card p-2 sm:grid-cols-[minmax(0,1fr)_10rem_auto]"
+          onSubmit={add}
+        >
+          <Input
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            placeholder="New milestone, e.g. Website launch"
+            aria-label="Milestone title"
+          />
+          <Input
+            type="date"
+            value={dueDate}
+            aria-label="Milestone due date"
+            onChange={(event) => setDueDate(event.target.value)}
+          />
+          <Button type="submit" loading={createMilestone.isPending}>
+            <Plus />
+            Add milestone
+          </Button>
+        </form>
       ) : null}
       {milestones.isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading milestones…</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {Array.from({ length: 2 }).map((_, index) => (
+            <Skeleton key={index} className="h-28 w-full rounded-xl" />
+          ))}
+        </div>
       ) : (milestones.data ?? []).length === 0 ? (
-        <EmptyState
-          title="No milestones"
-          description="Add a milestone and link tasks to it from the task page."
-        />
+        <Surface className="p-0 sm:p-0">
+          <EmptyState
+            compact
+            icon={Flag}
+            title="No milestones"
+            description="Add a milestone and link tasks to it from the task page."
+          />
+        </Surface>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2">
           {(milestones.data ?? []).map((item) => (
-            <Surface key={item.id}>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                Milestone
-              </p>
-              <h3 className="mt-1 text-lg font-semibold">{item.title}</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Due: {item.dueDate ? formatDate(item.dueDate) : "No date"}
-              </p>
-              <p className="mt-3 text-sm">Progress: {item.progress}%</p>
-              <Meter className="mt-2" value={item.progress} />
-              <p className="mt-2 text-xs text-muted-foreground">
-                {item.taskCount} linked tasks
-              </p>
-              {canWrite ? (
-                <Button
-                  className="mt-3"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => void removeMilestone.mutateAsync(item.id)}
+            <Card key={item.id} className="p-4">
+              <div className="flex items-start gap-3">
+                <span
+                  className={cn(
+                    "flex size-8 shrink-0 items-center justify-center rounded-lg",
+                    item.progress >= 100
+                      ? "bg-success-soft text-success-soft-foreground"
+                      : "bg-primary-soft text-primary-soft-foreground",
+                  )}
                 >
-                  Remove
-                </Button>
-              ) : null}
-            </Surface>
+                  <Flag className="size-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <h3 className="truncate text-base font-semibold text-foreground">
+                    {item.title}
+                  </h3>
+                  <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    <span className="inline-flex items-center gap-1 tabular">
+                      <CalendarDays className="size-3" />
+                      {item.dueDate ? formatDate(item.dueDate) : "No date"}
+                    </span>
+                    <span className="inline-flex items-center gap-1 tabular">
+                      <ListChecks className="size-3" />
+                      {item.taskCount} linked {item.taskCount === 1 ? "task" : "tasks"}
+                    </span>
+                  </p>
+                </div>
+                {canWrite ? (
+                  <Tooltip content="Remove milestone">
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      aria-label={`Remove milestone ${item.title}`}
+                      loading={
+                        removeMilestone.isPending &&
+                        removeMilestone.variables === item.id
+                      }
+                      onClick={() =>
+                        void removeMilestone
+                          .mutateAsync(item.id)
+                          .then(() => toast.success("Milestone removed"))
+                          .catch(() => undefined)
+                      }
+                    >
+                      <Trash2 />
+                    </Button>
+                  </Tooltip>
+                ) : null}
+              </div>
+              <div className="mt-3 flex items-center gap-3">
+                <Progress
+                  value={item.progress}
+                  tone={progressTone(item.progress)}
+                  aria-label={`${item.title} progress`}
+                />
+                <span className="w-10 shrink-0 text-right text-xs font-medium text-foreground tabular">
+                  {item.progress}%
+                </span>
+              </div>
+            </Card>
           ))}
         </div>
       )}
@@ -121,10 +184,16 @@ export function ProjectTimelinePanel({ projectId }: { projectId: string }) {
   const mutateTask = useMutateTask();
 
   if (timeline.isLoading) {
-    return <p className="text-sm text-muted-foreground">Loading timeline…</p>;
+    return (
+      <div className="space-y-2" role="status" aria-label="Loading timeline">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Skeleton key={index} className="h-16 w-full rounded-xl" />
+        ))}
+      </div>
+    );
   }
   if (!timeline.data) {
-    return <EmptyState title="Unable to load timeline" />;
+    return <EmptyState icon={GanttChart} title="Unable to load timeline" />;
   }
 
   const data = timeline.data;
@@ -141,20 +210,20 @@ export function ProjectTimelinePanel({ projectId }: { projectId: string }) {
       <p className="text-sm text-muted-foreground">
         Tasks, dependencies, and milestones stay in sync with the task list.
       </p>
-      <div className="space-y-3">
+      <div className="space-y-2">
         {data.milestones.map((item) => {
           if (!item.dueDate) return null;
           const left =
             ((new Date(item.dueDate).getTime() - start) / span) * 100;
           return (
-            <div key={item.id} className="relative h-8 rounded-lg bg-secondary">
+            <div key={item.id} className="relative h-8 rounded-lg bg-muted">
               <div
                 className="absolute top-1 h-6 w-1 rounded-full bg-primary"
                 style={{ left: `${Math.min(98, Math.max(0, left))}%` }}
                 title={item.title}
               />
-              <p className="absolute left-3 top-1.5 text-xs font-medium">
-                {item.title} · {item.progress}%
+              <p className="absolute left-3 top-1.5 text-xs font-medium text-foreground">
+                {item.title} · <span className="tabular">{item.progress}%</span>
               </p>
             </div>
           );
@@ -175,19 +244,20 @@ export function ProjectTimelinePanel({ projectId }: { projectId: string }) {
           return (
             <div
               key={task.id}
-              className="rounded-xl border border-border bg-card p-3"
+              className="rounded-xl border border-border bg-card p-3 shadow-xs"
             >
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <div className="min-w-0">
                   <Link
                     href={`/app/tasks/${task.id}`}
-                    className="font-medium hover:text-primary"
+                    className="rounded-sm text-base font-medium text-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     {task.title}
                   </Link>
                   {task.blocked && task.dependsOn[0] ? (
-                    <p className="text-xs text-muted-foreground">
-                      🔒 Blocked by “
+                    <p className="inline-flex items-center gap-1 text-xs text-warning-soft-foreground">
+                      <Lock className="size-3" />
+                      Blocked by “
                       {titleById.get(task.dependsOn[0]) ?? "another task"}”
                     </p>
                   ) : null}
@@ -196,7 +266,8 @@ export function ProjectTimelinePanel({ projectId }: { projectId: string }) {
                   <div className="flex gap-2">
                     <input
                       type="date"
-                      className={nativeSelectClass}
+                      aria-label={`Start date for ${task.title}`}
+                      className={cn(nativeSelectClass, "h-8")}
                       value={toDateInputValue(task.startDate)}
                       onChange={(event) =>
                         void mutateTask.mutateAsync({
@@ -210,7 +281,8 @@ export function ProjectTimelinePanel({ projectId }: { projectId: string }) {
                     />
                     <input
                       type="date"
-                      className={nativeSelectClass}
+                      aria-label={`Due date for ${task.title}`}
+                      className={cn(nativeSelectClass, "h-8")}
                       value={toDateInputValue(task.dueDate)}
                       onChange={(event) =>
                         void mutateTask.mutateAsync({
@@ -225,7 +297,7 @@ export function ProjectTimelinePanel({ projectId }: { projectId: string }) {
                   </div>
                 ) : null}
               </div>
-              <div className="relative h-3 overflow-hidden rounded-full bg-muted">
+              <div className="relative h-2.5 overflow-hidden rounded-full bg-muted">
                 <div
                   className="absolute h-full rounded-full bg-primary"
                   style={{
@@ -238,7 +310,7 @@ export function ProjectTimelinePanel({ projectId }: { projectId: string }) {
           );
         })}
         {data.tasks.length === 0 ? (
-          <EmptyState title="No tasks on the timeline yet" />
+          <EmptyState icon={GanttChart} title="No tasks on the timeline yet" />
         ) : null}
       </div>
     </div>
@@ -272,59 +344,73 @@ export function ProjectNotesPanel({
     const page = await createPage.mutateAsync({
       title: `${marker}${label}`,
     });
+    toast.success("Note created");
     setTitle("");
     setSelectedId(page.id);
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
-      <Surface className="space-y-3">
-        <p className="text-sm font-semibold">Notes</p>
+    <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
+      <Surface className="space-y-3 p-3 sm:p-3">
+        <p className="px-1 text-sm font-semibold text-foreground">Notes</p>
         {canWrite ? (
           <form className="space-y-2" onSubmit={add}>
             <Input
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               placeholder="Note title"
+              aria-label="Note title"
             />
             <Button
               type="submit"
               size="sm"
+              variant="soft"
               className="w-full"
-              disabled={createPage.isPending}
+              loading={createPage.isPending}
             >
+              <Plus />
               New note
             </Button>
           </form>
         ) : null}
         {pages.isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading notes…</p>
+          <div className="space-y-1.5" role="status" aria-label="Loading notes">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <Skeleton key={index} className="h-8 w-full" />
+            ))}
+          </div>
         ) : items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
+          <p className="px-1 text-sm text-muted-foreground">
             No notes yet. Capture decisions and project context here.
           </p>
         ) : (
-          <ul className="space-y-1">
+          <ul className="space-y-0.5">
             {items.map((item) => (
               <li key={item.id}>
                 <button
                   type="button"
                   onClick={() => setSelectedId(item.id)}
+                  aria-current={item.id === selected?.id ? "true" : undefined}
                   className={cn(
-                    "w-full rounded-lg px-2.5 py-2 text-left text-sm",
+                    "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     item.id === selected?.id
                       ? "bg-accent font-medium text-accent-foreground"
-                      : "hover:bg-secondary",
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >
-                  {item.title.slice(marker.length) || item.title}
+                  <NotebookPen className="size-3.5 shrink-0" />
+                  <span className="truncate">
+                    {item.title.slice(marker.length) || item.title}
+                  </span>
                 </button>
               </li>
             ))}
           </ul>
         )}
         {createPage.error ? (
-          <p className="text-sm text-destructive">{createPage.error.message}</p>
+          <p className="text-sm text-danger-soft-foreground">
+            {createPage.error.message}
+          </p>
         ) : null}
       </Surface>
       {selected ? (
@@ -335,10 +421,13 @@ export function ProjectNotesPanel({
           canWrite={canWrite}
         />
       ) : (
-        <EmptyState
-          title="No notes yet"
-          description="Create a note to keep project details next to the work."
-        />
+        <Surface className="p-0 sm:p-0">
+          <EmptyState
+            icon={NotebookPen}
+            title="No notes yet"
+            description="Create a note to keep project details next to the work."
+          />
+        </Surface>
       )}
     </div>
   );
@@ -365,6 +454,7 @@ function ProjectNoteEditor({
       title: `${marker}${title.trim() || "Untitled"}`,
       body,
     });
+    toast.success("Note saved");
   }
 
   return (
@@ -373,22 +463,30 @@ function ProjectNoteEditor({
         <Input
           value={title}
           disabled={!canWrite}
+          aria-label="Note title"
+          className="h-10 border-transparent px-0 font-heading text-xl font-semibold tracking-[-0.02em] shadow-none focus-visible:border-transparent"
           onChange={(event) => setTitle(event.target.value)}
         />
         <textarea
           className={nativeTextareaClass}
           rows={14}
           value={body}
+          aria-label="Note body"
+          placeholder="Write something…"
           disabled={!canWrite}
           onChange={(event) => setBody(event.target.value)}
         />
-        {canWrite ? (
-          <Button type="submit" disabled={updatePage.isPending}>
-            {updatePage.isPending ? "Saving…" : "Save note"}
-          </Button>
-        ) : null}
         {updatePage.error ? (
-          <p className="text-sm text-destructive">{updatePage.error.message}</p>
+          <p className="text-sm text-danger-soft-foreground">
+            {updatePage.error.message}
+          </p>
+        ) : null}
+        {canWrite ? (
+          <div className="flex justify-end">
+            <Button type="submit" size="sm" loading={updatePage.isPending}>
+              Save note
+            </Button>
+          </div>
         ) : null}
       </form>
     </Surface>

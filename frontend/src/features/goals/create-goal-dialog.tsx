@@ -1,6 +1,7 @@
 "use client";
 
 import { CreateResourceDialog } from "@/components/create-resource-dialog";
+import { toast } from "@/components/ui/toast";
 import { useProjects } from "@/features/projects/hooks";
 import { useCreateGoal } from "@/features/goals/hooks";
 import {
@@ -35,11 +36,12 @@ export function CreateGoalDialog({
         initial={emptyGoalForm()}
         projects={projects}
         submitting={createGoal.isPending}
-        submitLabel="Create"
+        submitLabel="Create goal"
         error={createGoal.error?.message}
         onSubmit={async (values) => {
           try {
             await createGoal.mutateAsync(toGoalWriteInput(values));
+            toast.success("Goal created", { description: values.title.trim() });
             onOpenChange(false);
           } catch {
             // Error is shown from the mutation.
