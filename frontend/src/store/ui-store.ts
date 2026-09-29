@@ -8,17 +8,30 @@ export type CreateDialogType =
   | "todo"
   | "goal";
 
+const SIDEBAR_KEY = "sidebarCollapsed";
+
+function persistSidebar(collapsed: boolean) {
+  try {
+    localStorage.setItem(SIDEBAR_KEY, collapsed ? "1" : "0");
+  } catch {
+    // Non-critical preference; ignore unavailable storage.
+  }
+}
+
 type UiStore = {
   openCreateDialog: CreateDialogType | null;
   createTaskProjectId: string | null;
   createMeetingProjectId: string | null;
   sidebarCollapsed: boolean;
   mobileNavOpen: boolean;
+  commandOpen: boolean;
   setOpenCreateDialog: (type: CreateDialogType | null) => void;
   openTaskCreate: (projectId?: string | null) => void;
   openMeetingCreate: (projectId?: string | null) => void;
   toggleSidebarCollapsed: () => void;
+  hydrateSidebar: () => void;
   setMobileNavOpen: (open: boolean) => void;
+  setCommandOpen: (open: boolean) => void;
 };
 
 export const useUiStore = create<UiStore>((set) => ({
@@ -27,6 +40,7 @@ export const useUiStore = create<UiStore>((set) => ({
   createMeetingProjectId: null,
   sidebarCollapsed: false,
   mobileNavOpen: false,
+  commandOpen: false,
   setOpenCreateDialog: (type) =>
     set((state) => ({
       openCreateDialog: type,
@@ -45,6 +59,17 @@ export const useUiStore = create<UiStore>((set) => ({
       createMeetingProjectId: projectId ?? null,
     }),
   toggleSidebarCollapsed: () =>
-    set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+    set((state) => {
+      persistSidebar(!state.sidebarCollapsed);
+      return { sidebarCollapsed: !state.sidebarCollapsed };
+    }),
+  hydrateSidebar: () => {
+    try {
+      set({ sidebarCollapsed: localStorage.getItem(SIDEBAR_KEY) === "1" });
+    } catch {
+      // Keep default.
+    }
+  },
   setMobileNavOpen: (open: boolean) => set({ mobileNavOpen: open }),
+  setCommandOpen: (open: boolean) => set({ commandOpen: open }),
 }));

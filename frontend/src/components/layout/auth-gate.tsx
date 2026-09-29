@@ -12,6 +12,7 @@ import { WorkspaceGate } from "@/components/layout/workspace-gate";
 import { RealtimeProvider } from "@/features/chat/realtime-provider";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { useUiStore } from "@/store/ui-store";
+import { AppLoadingScreen } from "@/components/layout/app-loading";
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const { user, isLoading } = useRequireAuth();
@@ -19,14 +20,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const setOpenCreateDialog = useUiStore((state) => state.setOpenCreateDialog);
 
   if (isLoading || !user) {
-    return (
-      <div className="flex min-h-full items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 animate-pulse rounded-xl bg-sidebar" />
-          <p className="text-sm text-muted-foreground">Loading workspace…</p>
-        </div>
-      </div>
-    );
+    return <AppLoadingScreen />;
   }
 
   return (

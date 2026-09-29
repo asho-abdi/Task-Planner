@@ -1,11 +1,27 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { Check, ChevronsUpDown, Plus } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useWorkspaces } from "@/features/workspaces/hooks";
 import { useUiStore } from "@/store/ui-store";
 import { useWorkspaceStore } from "@/store/workspace-store";
+
+const ROLE_LABEL: Record<string, string> = {
+  OWNER: "Owner",
+  ADMIN: "Admin",
+  MEMBER: "Member",
+  VIEWER: "Viewer",
+};
 
 export function WorkspaceSwitcher({ collapsed }: { collapsed?: boolean }) {
   const workspaces = useWorkspaces();
@@ -16,97 +32,102 @@ export function WorkspaceSwitcher({ collapsed }: { collapsed?: boolean }) {
     (state) => state.setCurrentWorkspaceId,
   );
   const setOpenCreateDialog = useUiStore((state) => state.setOpenCreateDialog);
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-  const current = (workspaces.data ?? []).find(
-    (workspace) => workspace.id === currentWorkspaceId,
-  );
+  const list = workspaces.data ?? [];
+  const current = list.find((workspace) => workspace.id === currentWorkspaceId);
 
-  useEffect(() => {
-    function onClick(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, []);
-
-  const menu = (
-    <div
-      className={cn(
-        "absolute z-30 overflow-hidden rounded-xl border border-white/10 bg-foreground py-1 shadow-[0_16px_40px_rgba(0,0,0,0.35)]",
-        collapsed ? "left-full top-0 ml-2 w-56" : "mt-1.5 w-full",
-      )}
-    >
-      {(workspaces.data ?? []).map((workspace) => (
-        <button
-          key={workspace.id}
-          type="button"
-          className={cn(
-            "flex w-full items-center gap-2.5 px-3 py-2 text-left text-[14px] font-semibold text-white transition-colors hover:bg-card/[0.08]",
-            workspace.id === currentWorkspaceId && "bg-card/[0.06]",
-          )}
-          onClick={() => {
-            setCurrentWorkspaceId(workspace.id);
-            setOpen(false);
-          }}
-        >
-          <WorkspaceMark name={workspace.name} logo={workspace.logo} />
-          <span className="min-w-0 flex-1 truncate">{workspace.name}</span>
-          {workspace.id === currentWorkspaceId ? (
-            <Check className="h-3.5 w-3.5 text-primary" strokeWidth={2} />
-          ) : null}
-        </button>
-      ))}
-      <button
-        type="button"
-        className="flex w-full items-center gap-2.5 border-t border-white/10 px-3 py-2 text-left text-[14px] font-semibold text-subtle-foreground transition-colors hover:bg-card/[0.06] hover:text-white"
-        onClick={() => {
-          setOpen(false);
-          setOpenCreateDialog("workspace");
-        }}
-      >
-        <Plus className="h-3.5 w-3.5" strokeWidth={1.75} />
-        Create workspace
-      </button>
-    </div>
-  );
-
-  if (collapsed) {
-    return (
-      <div ref={rootRef} className="relative flex justify-center px-2 py-2">
-        <button
-          type="button"
-          title={current?.name ?? "Workspace"}
-          className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-card/[0.06]"
-          onClick={() => setOpen((value) => !value)}
-        >
-          <WorkspaceMark name={current?.name} logo={current?.logo} />
-        </button>
-        {open ? menu : null}
+  if (workspaces.isLoading) {
+    return collapsed ? (
+      <Skeleton className="mx-auto size-8 rounded-lg" />
+    ) : (
+      <div className="flex items-center gap-2.5 px-2 py-1.5">
+        <Skeleton className="size-7 rounded-lg" />
+        <Skeleton className="h-3 w-28" />
       </div>
     );
   }
 
-  return (
-    <div ref={rootRef} className="relative px-2 py-2">
-      <button
-        type="button"
-        aria-label="Workspace"
-        className="flex h-8 w-full items-center justify-between rounded-md px-2 text-left text-[14px] font-bold leading-[1.3] text-white outline-none hover:bg-card/[0.06] focus-visible:bg-card/[0.06]"
-        onClick={() => setOpen((value) => !value)}
-      >
-        <span className="flex min-w-0 items-center gap-2">
-          <WorkspaceMark name={current?.name} logo={current?.logo} />
-          <span className="truncate font-bold">
-            {current?.name ?? "Select workspace"}
+  const trigger = (
+    <DropdownMenuTrigger
+      aria-label={`Workspace: ${current?.name ?? "none"}. Switch workspace`}
+      className={cn(
+        "group flex w-full items-center gap-2.5 rounded-lg text-left outline-none transition-colors duration-150",
+        "hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-sidebar-accent",
+        collapsed ? "size-10 justify-center" : "h-11 px-2",
+      )}
+    >
+      <WorkspaceMark
+        name={current?.name}
+        logo={current?.logo}
+        className="size-7 rounded-lg text-xs"
+      />
+      {collapsed ? null : (
+        <>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-base font-semibold text-foreground">
+              {current?.name ?? "Select workspace"}
+            </span>
+            {current ? (
+              <span className="block truncate text-2xs text-sidebar-muted">
+                {ROLE_LABEL[current.role] ?? current.role} · {list.length}{" "}
+                {list.length === 1 ? "workspace" : "workspaces"}
+              </span>
+            ) : null}
           </span>
-        </span>
-        <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-      </button>
-      {open ? menu : null}
-    </div>
+          <ChevronsUpDown className="size-4 shrink-0 text-sidebar-muted transition-colors group-hover:text-foreground" />
+        </>
+      )}
+    </DropdownMenuTrigger>
+  );
+
+  return (
+    <DropdownMenu>
+      {collapsed ? (
+        <Tooltip content={current?.name ?? "Workspace"} side="right">
+          {trigger}
+        </Tooltip>
+      ) : (
+        trigger
+      )}
+      <DropdownMenuContent
+        align="start"
+        side={collapsed ? "right" : "bottom"}
+        className="w-64"
+      >
+        <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
+        {list.map((workspace) => {
+          const active = workspace.id === currentWorkspaceId;
+          return (
+            <DropdownMenuItem
+              key={workspace.id}
+              onSelect={() => setCurrentWorkspaceId(workspace.id)}
+              className="h-10"
+            >
+              <WorkspaceMark
+                name={workspace.name}
+                logo={workspace.logo}
+                className="size-6 rounded-md"
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-foreground">{workspace.name}</span>
+                <span className="block text-2xs text-muted-foreground">
+                  {ROLE_LABEL[workspace.role] ?? workspace.role}
+                </span>
+              </span>
+              {active ? <Check className="!text-primary" /> : null}
+            </DropdownMenuItem>
+          );
+        })}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onSelect={() => {
+            window.setTimeout(() => setOpenCreateDialog("workspace"), 0);
+          }}
+        >
+          <Plus />
+          Create workspace
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -125,14 +146,15 @@ export function WorkspaceMark({
       <img
         src={logo}
         alt=""
-        className={cn("h-5 w-5 rounded-md object-cover", className)}
+        className={cn("size-5 shrink-0 rounded-md object-cover", className)}
       />
     );
   }
   return (
     <span
+      aria-hidden
       className={cn(
-        "flex h-5 w-5 items-center justify-center rounded-md bg-primary text-[9px] font-semibold text-white",
+        "flex size-5 shrink-0 items-center justify-center rounded-md bg-primary font-heading text-[10px] font-semibold text-primary-foreground",
         className,
       )}
     >

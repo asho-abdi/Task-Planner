@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { useWorkspaces } from "@/features/workspaces/hooks";
 import { useWorkspaceStore } from "@/store/workspace-store";
+import { AppLoadingScreen } from "@/components/layout/app-loading";
 
 export function WorkspaceGate({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -51,14 +52,7 @@ export function WorkspaceGate({ children }: { children: ReactNode }) {
   const ready = list.some((workspace) => workspace.id === currentWorkspaceId);
 
   if (workspaces.isLoading || !ready) {
-    return (
-      <div className="flex min-h-full items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 animate-pulse rounded-xl bg-sidebar" />
-          <p className="text-sm text-muted-foreground">Loading workspace…</p>
-        </div>
-      </div>
-    );
+    return <AppLoadingScreen />;
   }
 
   return children;
