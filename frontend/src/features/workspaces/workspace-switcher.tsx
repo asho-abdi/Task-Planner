@@ -154,7 +154,7 @@ export function WorkspaceMark({
     <span
       aria-hidden
       className={cn(
-        "flex size-5 shrink-0 items-center justify-center rounded-md bg-primary font-heading text-[10px] font-semibold text-primary-foreground",
+        "flex size-5 shrink-0 items-center justify-center rounded-md bg-primary font-heading text-3xs font-semibold text-primary-foreground",
         className,
       )}
     >

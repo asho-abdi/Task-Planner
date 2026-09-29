@@ -234,6 +234,7 @@ export function StatCard({
   tone = "default",
   href,
   className,
+  invertDelta = false,
 }: {
   label: string;
   value: ReactNode;
@@ -244,6 +245,8 @@ export function StatCard({
   tone?: "default" | "primary" | "success" | "warning" | "danger" | "info";
   href?: string;
   className?: string;
+  /** Treat increases as bad (e.g. overdue counts): colours flip, arrows don't. */
+  invertDelta?: boolean;
 }) {
   const toneClass = {
     default: "bg-muted text-muted-foreground",
@@ -272,7 +275,9 @@ export function StatCard({
           <span
             className={cn(
               "inline-flex items-center gap-0.5 text-xs font-medium tabular",
-              delta >= 0 ? "text-success-soft-foreground" : "text-danger-soft-foreground",
+              (delta >= 0) !== invertDelta
+                ? "text-success-soft-foreground"
+                : "text-danger-soft-foreground",
             )}
           >
             {delta >= 0 ? <ArrowUpRight className="size-3" /> : <ArrowDownRight className="size-3" />}

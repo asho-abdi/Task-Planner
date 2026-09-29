@@ -20,7 +20,9 @@ import {
 import { Kbd } from "@/components/ui/kbd";
 import { CommandPalette } from "@/components/layout/command-palette";
 import {
+  ADMIN_GROUP,
   CREATE_ITEMS,
+  NAV,
   matchNav,
   navGroupsFor,
 } from "@/components/layout/nav-config";
@@ -57,7 +59,7 @@ export function AppShell({ user, children }: AppShellProps) {
   const currentWorkspace = (workspaces.data ?? []).find(
     (workspace) => workspace.id === currentWorkspaceId,
   );
-  const section = matchNav(pathname, navGroups);
+  const section = matchNav(pathname, [...NAV, ADMIN_GROUP]);
   const isDetail = Boolean(section && pathname.length > section.href.length + 1);
 
   useEffect(() => {

@@ -78,7 +78,7 @@ export function ProductPreview({ className }: { className?: string }) {
               { label: "Done", value: "18", bar: "w-4/5 bg-success" },
             ].map((stat) => (
               <div key={stat.label} className="rounded-lg border border-border bg-card p-2">
-                <p className="text-[10px] text-muted-foreground">{stat.label}</p>
+                <p className="text-3xs text-muted-foreground">{stat.label}</p>
                 <p className="font-heading text-base font-semibold text-foreground tabular">
                   {stat.value}
                 </p>
@@ -109,11 +109,11 @@ export function ProductPreview({ className }: { className?: string }) {
                   >
                     {task.title}
                   </span>
-                  <span className="block text-[10px] text-muted-foreground">
+                  <span className="block text-3xs text-muted-foreground">
                     {task.project} · {task.due}
                   </span>
                 </span>
-                <span className={cn("rounded-full px-1.5 py-px text-[9px] font-medium", TONE[task.tone])}>
+                <span className={cn("rounded-full px-1.5 py-px text-3xs font-medium", TONE[task.tone])}>
                   {task.status}
                 </span>
               </div>
