@@ -1,6 +1,7 @@
 "use client";
 
 import { CreateResourceDialog } from "@/components/create-resource-dialog";
+import { toast } from "@/components/ui/toast";
 import { useProjects } from "@/features/projects/hooks";
 import { useTeams } from "@/features/collaboration/hooks";
 import { useCreateMeeting } from "@/features/meetings/hooks";
@@ -37,8 +38,8 @@ export function CreateMeetingDialog({
     <CreateResourceDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="New meeting"
-      description="Add an online or offline meeting. People, projects, and teams load in the background."
+      title="Schedule meeting"
+      description="Pick a time, a place and who should be there."
       className="max-w-2xl"
     >
       <MeetingForm
@@ -48,11 +49,12 @@ export function CreateMeetingDialog({
         members={members}
         teams={teams}
         submitting={createMeeting.isPending}
-        submitLabel="Create"
+        submitLabel="Schedule meeting"
         error={createMeeting.error?.message}
         onSubmit={async (values) => {
           try {
             await createMeeting.mutateAsync(toMeetingWriteInput(values));
+            toast.success("Meeting scheduled");
             onOpenChange(false);
           } catch {
             // Error is shown from the mutation.

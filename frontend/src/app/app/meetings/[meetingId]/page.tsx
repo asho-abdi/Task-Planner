@@ -1,11 +1,24 @@
 "use client";
 
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
+import {
+  Ban,
+  Bell,
+  CalendarX,
+  CheckCircle2,
+  Clock,
+  Pencil,
+  Repeat,
+  Video,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/badge";
-import { PageHeader, PageShell, Surface } from "@/components/page-header";
+import { EmptyState, PageHeader, PageShell, Surface } from "@/components/page-header";
+import { Avatar } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/components/ui/toast";
 import { useTeams } from "@/features/collaboration/hooks";
 import { useProjects } from "@/features/projects/hooks";
 import {
@@ -27,6 +40,7 @@ import {
   MeetingMeta,
   MeetingNotes,
   MeetingParticipants,
+  formatMeetingTime,
   joinMeetingUrl,
 } from "@/features/meetings/meeting-ui";
 import { useCurrentUser } from "@/features/auth/hooks";
@@ -37,6 +51,29 @@ import {
 import { useWorkspaceStore } from "@/store/workspace-store";
 import { AiExtractCard } from "@/features/ai/ui";
 import { REMIND_LABELS } from "@/features/meetings/types";
+
+function DetailSkeleton() {
+  return (
+    <PageShell width="wide">
+      <div className="space-y-3">
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="h-9 w-72" />
+        <Skeleton className="h-4 w-56" />
+      </div>
+      <Skeleton className="h-20 w-full rounded-xl" />
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="space-y-6">
+          <Skeleton className="h-48 w-full rounded-xl" />
+          <Skeleton className="h-64 w-full rounded-xl" />
+        </div>
+        <div className="space-y-6">
+          <Skeleton className="h-72 w-full rounded-xl" />
+          <Skeleton className="h-32 w-full rounded-xl" />
+        </div>
+      </div>
+    </PageShell>
+  );
+}
 
 export default function MeetingDetailPage() {
   const params = useParams<{ meetingId: string }>();
@@ -56,18 +93,46 @@ export default function MeetingDetailPage() {
   const canWrite = Boolean(workspace && workspace.role !== "VIEWER");
 
   if (meeting.isLoading) {
-    return (
-      <PageShell>
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-64 w-full" />
-      </PageShell>
-    );
+    return <DetailSkeleton />;
   }
 
   if (!meeting.data) {
     return (
       <PageShell>
-        <p className="text-sm text-muted-foreground">Meeting not found.</p>
+        <PageHeader
+          title="Meeting"
+          breadcrumbs={[
+            { label: "Meetings", href: "/app/meetings" },
+            { label: "Not found" },
+          ]}
+        />
+        <Surface>
+          <EmptyState
+            icon={CalendarX}
+            title="Meeting not found"
+            description={
+              meeting.isError
+                ? meeting.error.message
+                : "It may have been deleted or you no longer have access."
+            }
+            action={
+              <div className="flex gap-2">
+                {meeting.isError ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void meeting.refetch()}
+                  >
+                    Retry
+                  </Button>
+                ) : null}
+                <Button asChild size="sm">
+                  <Link href="/app/meetings">Back to meetings</Link>
+                </Button>
+              </div>
+            }
+          />
+        </Surface>
       </PageShell>
     );
   }
@@ -87,125 +152,194 @@ export default function MeetingDetailPage() {
       item.participants.some(
         (person) => person.userId === userId || person.id === userId,
       ));
+  const reminders = item.remindMinutes ?? [];
+  const startDate = new Date(item.startAt);
 
   return (
-    <PageShell>
+    <PageShell width="wide">
       <PageHeader
         title={item.title}
-        backHref="/app/meetings"
-        backLabel="Back to meetings"
-        description={`${item.organizer.name} · ${item.team?.name ?? "No team"}`}
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
+        breadcrumbs={[
+          { label: "Meetings", href: "/app/meetings" },
+          { label: item.title },
+        ]}
+        description={
+          <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="inline-flex items-center gap-1.5">
+              <Avatar name={item.organizer.name} size="xs" />
+              Organized by{" "}
+              <span className="font-medium text-foreground">
+                {item.organizer.name}
+              </span>
+            </span>
+            {item.team ? (
+              <span className="text-subtle-foreground">· {item.team.name}</span>
+            ) : null}
+          </span>
+        }
+        meta={
+          <>
             <StatusBadge value={item.status} />
+            <span className="inline-flex items-center gap-1 tabular">
+              <Clock className="size-3.5" />
+              {startDate.toLocaleDateString(undefined, {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+              })}
+              {" · "}
+              {formatMeetingTime(item)}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Repeat className="size-3.5" />
+              {item.recurrence !== "NONE"
+                ? `Repeats ${item.recurrence.toLowerCase()}`
+                : "Does not repeat"}
+            </span>
+            {reminders.length ? (
+              <span className="inline-flex items-center gap-1">
+                <Bell className="size-3.5" />
+                {reminders
+                  .map((minutes) => REMIND_LABELS[minutes] ?? `${minutes} min`)
+                  .join(", ")}
+              </span>
+            ) : null}
+          </>
+        }
+        actions={
+          <>
             {joinUrl && item.mode === "ONLINE" ? (
               <Button asChild>
                 <a href={joinUrl} target="_blank" rel="noreferrer">
+                  <Video />
                   Join Meeting
                 </a>
+              </Button>
+            ) : null}
+            {canManage && !editing ? (
+              <Button variant="outline" onClick={() => setEditing(true)}>
+                <Pencil />
+                Edit
               </Button>
             ) : null}
             {canManage && item.status !== "COMPLETED" ? (
               <Button
                 variant="outline"
+                loading={completeMeeting.isPending}
                 onClick={() =>
-                  void completeMeeting.mutateAsync(item.id).catch(() => undefined)
+                  void completeMeeting
+                    .mutateAsync(item.id)
+                    .then(() => toast.success("Meeting marked as complete"))
+                    .catch(() => undefined)
                 }
-                disabled={completeMeeting.isPending}
               >
+                <CheckCircle2 />
                 Complete
               </Button>
             ) : null}
             {canManage ? (
               <Button
                 variant="destructive"
+                loading={cancelMeeting.isPending}
                 onClick={() =>
-                  void cancelMeeting.mutateAsync(item.id).catch(() => undefined)
+                  void cancelMeeting
+                    .mutateAsync(item.id)
+                    .then(() => toast.success("Meeting cancelled"))
+                    .catch(() => undefined)
                 }
-                disabled={cancelMeeting.isPending}
               >
+                <Ban />
                 Cancel meeting
               </Button>
             ) : null}
-          </div>
+          </>
         }
       />
-      <MeetingMeta meeting={item} />
-      {item.recurrence !== "NONE" || (item.remindMinutes ?? []).length ? (
-        <p className="text-sm text-muted-foreground">
-          {item.recurrence !== "NONE"
-            ? `Repeats ${item.recurrence.toLowerCase()}`
-            : "Does not repeat"}
-          {(item.remindMinutes ?? []).length
-            ? ` · Reminders: ${item.remindMinutes
-                .map((minutes) => REMIND_LABELS[minutes] ?? `${minutes} min`)
-                .join(", ")}`
-            : ""}
-        </p>
+
+      {locked ? (
+        <div className="flex items-center gap-2 rounded-lg border border-border bg-muted px-4 py-3 text-sm text-muted-foreground">
+          <Ban className="size-4 shrink-0" />
+          This meeting is cancelled. Notes and agenda are read only.
+        </div>
       ) : null}
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,340px)]">
-        <div className="space-y-4">
+
+      {canManage && editing ? (
+        <Surface className="animate-fade-in">
+          <div className="mb-5">
+            <h2 className="text-md font-semibold tracking-[-0.01em] text-foreground">
+              Edit meeting
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Changes are sent to participants when you save.
+            </p>
+          </div>
+          <MeetingForm
+            key={item.updatedAt}
+            initial={meetingToFormValues(item)}
+            projects={projects}
+            members={members}
+            teams={teams}
+            submitting={updateMeeting.isPending}
+            submitLabel="Save changes"
+            error={updateMeeting.error?.message}
+            extraActions={
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditing(false)}
+              >
+                Close
+              </Button>
+            }
+            onSubmit={async (values) => {
+              try {
+                await updateMeeting.mutateAsync(toMeetingWriteInput(values));
+                toast.success("Meeting updated");
+                setEditing(false);
+              } catch {
+                // Error is shown on the form via updateMeeting.error
+              }
+            }}
+          />
+        </Surface>
+      ) : null}
+
+      <MeetingMeta meeting={item} />
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-6">
+          {item.description ? (
+            <Surface>
+              <h2 className="mb-2 text-md font-semibold tracking-[-0.01em] text-foreground">
+                About
+              </h2>
+              <p className="whitespace-pre-wrap text-base leading-relaxed text-muted-foreground">
+                {item.description}
+              </p>
+            </Surface>
+          ) : null}
+          <MeetingAgenda meeting={item} canWrite={canManage} />
+          <MeetingNotes key={item.id} meeting={item} canWrite={canTakeNotes} />
+          <MeetingActionItems meeting={item} canWrite={canManage} />
+          <AiExtractCard
+            meetingId={item.id}
+            projectId={item.projectId ?? undefined}
+            defaultText={[item.discussion, item.notes, item.description]
+              .filter(Boolean)
+              .join("\n")}
+            canWrite={canManage}
+          />
+        </div>
+        <aside className="min-w-0 space-y-6">
           <MeetingParticipants
             meeting={item}
             userId={userId}
             canWrite={!locked}
           />
-          <MeetingAgenda meeting={item} canWrite={canManage} />
-          <MeetingNotes key={item.id} meeting={item} canWrite={canTakeNotes} />
-        </div>
-        <div className="space-y-4">
-          <MeetingActionItems meeting={item} canWrite={canManage} />
           <MeetingLinkedTasks meeting={item} />
           <MeetingFiles meeting={item} canWrite={canManage} />
-        </div>
+        </aside>
       </div>
-      {canManage ? (
-        <Surface>
-          {editing ? (
-            <MeetingForm
-              key={item.updatedAt}
-              initial={meetingToFormValues(item)}
-              projects={projects}
-              members={members}
-              teams={teams}
-              submitting={updateMeeting.isPending}
-              submitLabel="Save"
-              error={updateMeeting.error?.message}
-              extraActions={
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setEditing(false)}
-                >
-                  Close
-                </Button>
-              }
-              onSubmit={async (values) => {
-                try {
-                  await updateMeeting.mutateAsync(toMeetingWriteInput(values));
-                  setEditing(false);
-                } catch {
-                  // Error is shown on the form via updateMeeting.error
-                }
-              }}
-            />
-          ) : (
-            <Button variant="outline" onClick={() => setEditing(true)}>
-              Edit meeting
-            </Button>
-          )}
-        </Surface>
-      ) : locked ? (
-        <p className="text-sm text-muted-foreground">This meeting is cancelled.</p>
-      ) : null}
-      <AiExtractCard
-        meetingId={item.id}
-        projectId={item.projectId ?? undefined}
-        defaultText={[item.discussion, item.notes, item.description]
-          .filter(Boolean)
-          .join("\n")}
-        canWrite={canManage}
-      />
     </PageShell>
   );
 }
