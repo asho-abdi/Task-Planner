@@ -18,7 +18,7 @@ export function PendingInvitesBanner() {
   }
 
   return (
-    <div className="mb-6 rounded-xl border border-indigo-100 bg-indigo-50/80 px-4 py-3">
+    <div className="mb-6 rounded-xl border border-primary-soft bg-primary-soft px-4 py-3">
       <p className="text-sm font-medium">Pending workspace invitations</p>
       <ul className="mt-3 space-y-2">
         {items.map((invite) => (

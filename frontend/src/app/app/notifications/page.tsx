@@ -67,13 +67,13 @@ export default function NotificationsPage() {
           title={filter === "unread" ? "No unread notifications" : "You're all caught up"}
         />
       ) : (
-        <ListPanel className="divide-y divide-[#E5E7EB]">
+        <ListPanel className="divide-y divide-border">
           {items.map((item) => (
             <button
               key={item.id}
               type="button"
               className={cn(
-                "relative block w-full px-4 py-3 text-left hover:bg-[#F8FAFC]",
+                "relative block w-full px-4 py-3 text-left hover:bg-muted",
               )}
               onClick={() => {
                 if (!item.isRead) void markRead.mutate(item.id);
@@ -87,15 +87,15 @@ export default function NotificationsPage() {
                 <div className="min-w-0">
                   <p
                     className={cn(
-                      "text-[13px] text-[#172033]",
+                      "text-[13px] text-foreground",
                       !item.isRead && "font-medium",
                     )}
                   >
                     {item.title}
                   </p>
-                  <p className="mt-0.5 text-[12px] text-[#64748B]">{item.message}</p>
+                  <p className="mt-0.5 text-[12px] text-muted-foreground">{item.message}</p>
                 </div>
-                <p className="shrink-0 text-[12px] text-[#94A3B8]">
+                <p className="shrink-0 text-[12px] text-subtle-foreground">
                   {formatRelativeTime(item.createdAt)}
                 </p>
               </div>

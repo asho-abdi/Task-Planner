@@ -33,7 +33,7 @@ export default function ActivityPage() {
               const content = (
                 <div className="flex items-start justify-between gap-4 px-4 py-3">
                   <div>
-                    <p className="text-sm text-[#172033]">
+                    <p className="text-sm text-foreground">
                       <span className="font-medium">{actor}</span> {item.title}
                     </p>
                     <p className="mt-0.5 text-xs text-muted-foreground">

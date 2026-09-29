@@ -83,19 +83,19 @@ export function MeetingCard({ meeting }: { meeting: Meeting }) {
   return (
     <Link
       href={`/app/meetings/${meeting.id}`}
-      className="flex items-start gap-4 px-4 py-3.5 transition-colors hover:bg-[#F8FAFC]"
+      className="flex items-start gap-4 px-4 py-3.5 transition-colors hover:bg-muted"
     >
       <div className="w-[88px] shrink-0 pt-0.5">
-        <p className="text-[12px] font-medium text-[#172033]">
+        <p className="text-[12px] font-medium text-foreground">
           {formatDate(meeting.startAt)}
         </p>
-        <p className="mt-0.5 text-[12px] text-[#64748B]">
+        <p className="mt-0.5 text-[12px] text-muted-foreground">
           {formatMeetingTime(meeting)}
         </p>
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className="truncate text-[13px] font-medium text-[#172033]">
+          <h2 className="truncate text-[13px] font-medium text-foreground">
             {meeting.title}
           </h2>
           <StatusBadge value={meeting.status} />
@@ -103,7 +103,7 @@ export function MeetingCard({ meeting }: { meeting: Meeting }) {
             {meeting.mode === "ONLINE" ? "Online" : "In person"}
           </Badge>
         </div>
-        <p className="mt-0.5 truncate text-[12px] text-[#64748B]">
+        <p className="mt-0.5 truncate text-[12px] text-muted-foreground">
           {formatDuration(meeting.durationMinutes ?? 0)} ·{" "}
           {meeting.project?.name ?? "No project"} · {meeting.organizer.name}
           {meeting.mode === "ONLINE" && joinUrl
@@ -766,10 +766,10 @@ function MetaChip({
 }
 
 const EVENT_STYLES: Record<CalendarEventType, string> = {
-  meeting: "bg-indigo-100 text-indigo-800",
-  task: "bg-sky-100 text-sky-800",
-  deadline: "bg-amber-100 text-amber-900",
-  milestone: "bg-emerald-100 text-emerald-800",
+  meeting: "bg-primary-soft text-primary-soft-foreground",
+  task: "bg-info-soft text-info-soft-foreground",
+  deadline: "bg-warning-soft text-warning-soft-foreground",
+  milestone: "bg-success-soft text-success-soft-foreground",
 };
 
 export function TeamCalendar({
@@ -850,7 +850,7 @@ export function TeamCalendar({
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <p className="min-w-[148px] text-center text-[13px] font-semibold text-[#172033]">
+          <p className="min-w-[148px] text-center text-[13px] font-semibold text-foreground">
             {cursor.toLocaleString(undefined, { month: "long", year: "numeric" })}
           </p>
           <Button
@@ -872,7 +872,7 @@ export function TeamCalendar({
                 "rounded-md px-2.5 py-1 text-[12px] font-medium capitalize",
                 types.includes(type)
                   ? EVENT_STYLES[type]
-                  : "bg-[#F8FAFC] text-[#64748B]",
+                  : "bg-muted text-muted-foreground",
               )}
               onClick={() => toggleType(type)}
             >
@@ -933,7 +933,7 @@ export function TeamCalendar({
       ) : (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
           <Surface className="overflow-x-auto p-3 sm:p-4">
-            <div className="grid grid-cols-7 gap-px text-center text-[11px] font-medium uppercase tracking-[0.08em] text-[#94A3B8]">
+            <div className="grid grid-cols-7 gap-px text-center text-[11px] font-medium uppercase tracking-[0.08em] text-subtle-foreground">
               {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
                 <div key={day} className="py-2">
                   {day}
@@ -956,8 +956,8 @@ export function TeamCalendar({
                     onClick={() => day && setSelectedDay(key)}
                     className={cn(
                       "min-h-[84px] rounded-md p-1.5 text-left",
-                      day ? "hover:bg-[#F8FAFC]" : "",
-                      activeDay === key && day && "bg-[#F8FAFC]",
+                      day ? "hover:bg-muted" : "",
+                      activeDay === key && day && "bg-muted",
                     )}
                   >
                     {day ? (
@@ -967,7 +967,7 @@ export function TeamCalendar({
                             "inline-flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-medium",
                             isToday
                               ? "bg-primary text-white"
-                              : "text-[#172033]",
+                              : "text-foreground",
                           )}
                         >
                           {day}
@@ -987,7 +987,7 @@ export function TeamCalendar({
                             </Link>
                           ))}
                           {dayEvents.length > 3 ? (
-                            <p className="text-[11px] text-[#64748B]">
+                            <p className="text-[11px] text-muted-foreground">
                               +{dayEvents.length - 3}
                             </p>
                           ) : null}
@@ -1000,23 +1000,23 @@ export function TeamCalendar({
             </div>
           </Surface>
           <Surface className="p-4 sm:p-4">
-            <h2 className="text-[13px] font-semibold text-[#172033]">
+            <h2 className="text-[13px] font-semibold text-foreground">
               {formatDate(`${activeDay}T00:00:00`)}
             </h2>
             <div className="mt-3 space-y-1">
               {selectedEvents.length === 0 ? (
-                <p className="text-[13px] text-[#64748B]">Nothing scheduled.</p>
+                <p className="text-[13px] text-muted-foreground">Nothing scheduled.</p>
               ) : (
                 selectedEvents.map((event) => (
                   <Link
                     key={event.id}
                     href={event.href}
-                    className="block rounded-md px-2 py-2 hover:bg-[#F8FAFC]"
+                    className="block rounded-md px-2 py-2 hover:bg-muted"
                   >
-                    <p className="text-[13px] font-medium text-[#172033]">
+                    <p className="text-[13px] font-medium text-foreground">
                       {event.title}
                     </p>
-                    <p className="text-[12px] text-[#64748B]">
+                    <p className="text-[12px] text-muted-foreground">
                       {event.type} · {formatDateTime(event.startAt)}
                     </p>
                   </Link>

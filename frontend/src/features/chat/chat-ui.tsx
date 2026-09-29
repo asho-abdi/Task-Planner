@@ -81,7 +81,7 @@ function PresenceDot({ online }: { online: boolean }) {
     <span
       className={cn(
         "absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white",
-        online ? "bg-emerald-500" : "bg-slate-300",
+        online ? "bg-success" : "bg-border-strong",
       )}
     />
   );
@@ -106,7 +106,7 @@ export function WorkspaceChat({ selectedId }: { selectedId?: string | null }) {
   }, [activeId, conversations.data]);
 
   return (
-    <div className="-mx-4 -my-6 flex h-[calc(100svh-56px)] min-h-0 overflow-hidden border-t border-[#E5E7EB] bg-white sm:-mx-6 sm:-my-6">
+    <div className="-mx-4 -my-6 flex h-[calc(100svh-56px)] min-h-0 overflow-hidden border-t border-border bg-card sm:-mx-6 sm:-my-6">
       <ConversationList
         conversations={conversations.data ?? []}
         loading={conversations.isLoading}
@@ -145,7 +145,7 @@ export function ProjectChat({
     );
   }
   return (
-    <div className="flex h-[min(70vh,640px)] min-h-[420px] overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white">
+    <div className="flex h-[min(70vh,640px)] min-h-[420px] overflow-hidden rounded-2xl border border-border bg-card">
       <ChatPane
         conversationId={conversation.data.id}
         compact
@@ -184,18 +184,18 @@ function ConversationList({
   const projects = filtered.filter((item) => item.kind === "PROJECT");
 
   return (
-    <aside className="flex w-[248px] shrink-0 flex-col border-r border-[#E5E7EB] bg-[#F8FAFC]">
-      <div className="border-b border-[#E5E7EB] px-3 py-3">
+    <aside className="flex w-[248px] shrink-0 flex-col border-r border-border bg-muted">
+      <div className="border-b border-border px-3 py-3">
         <div className="flex items-center justify-between">
-          <p className="text-[13px] font-semibold text-[#172033]">Chat</p>
+          <p className="text-[13px] font-semibold text-foreground">Chat</p>
         </div>
         <div className="relative mt-2.5">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#94A3B8]" />
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-subtle-foreground" />
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search"
-            className="h-8 bg-white pl-8 text-[13px] shadow-none"
+            className="h-8 bg-card pl-8 text-[13px] shadow-none"
           />
         </div>
       </div>
@@ -207,7 +207,7 @@ function ConversationList({
             canWrite ? (
               <button
                 type="button"
-                className="text-[#64748B] hover:text-[#172033]"
+                className="text-muted-foreground hover:text-foreground"
                 onClick={() => setChannelOpen(true)}
                 aria-label="New channel"
               >
@@ -233,7 +233,7 @@ function ConversationList({
             canWrite ? (
               <button
                 type="button"
-                className="text-[#64748B] hover:text-[#172033]"
+                className="text-muted-foreground hover:text-foreground"
                 onClick={() => setDmOpen(true)}
                 aria-label="New message"
               >
@@ -299,7 +299,7 @@ function Section({
   return (
     <div className="mb-4">
       <div className="mb-1 flex items-center justify-between px-2">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-[#64748B]">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
           {title}
         </p>
         {action}
@@ -331,19 +331,19 @@ function ConversationButton({
       className={cn(
         "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px]",
         active
-          ? "bg-white text-[#172033]"
-          : "text-[#475569] hover:bg-white/80",
+          ? "bg-card text-foreground"
+          : "text-muted-foreground hover:bg-card/80",
       )}
     >
       {conversation.kind === "DIRECT" ? (
-        <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-[10px] font-semibold text-primary">
+        <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[10px] font-semibold text-primary">
           {initials(other?.user.name ?? title)}
           <PresenceDot online={online} />
         </span>
       ) : conversation.privacy === "PRIVATE" ? (
-        <Lock className="h-3.5 w-3.5 shrink-0 text-[#94A3B8]" />
+        <Lock className="h-3.5 w-3.5 shrink-0 text-subtle-foreground" />
       ) : (
-        <Hash className="h-3.5 w-3.5 shrink-0 text-[#94A3B8]" />
+        <Hash className="h-3.5 w-3.5 shrink-0 text-subtle-foreground" />
       )}
       <span className="min-w-0 flex-1 truncate">{title}</span>
       {conversation.unreadCount > 0 ? (
@@ -393,14 +393,14 @@ function ChatPane({
   return (
     <>
       <section className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-12 shrink-0 items-center justify-between border-b border-[#E5E7EB] px-4">
+        <header className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
           <div>
-            <p className="text-[13px] font-semibold text-[#172033]">
+            <p className="text-[13px] font-semibold text-foreground">
               {conversation.data
                 ? conversationTitle(conversation.data, user.data?.id)
                 : "Conversation"}
             </p>
-            <p className="text-[12px] text-[#64748B]">
+            <p className="text-[12px] text-muted-foreground">
               {conversation.data?.description ||
                 (conversation.data?.kind === "DIRECT"
                   ? "Direct message"
@@ -418,7 +418,7 @@ function ChatPane({
           canWrite={canWrite}
         />
         {typingNames.length ? (
-          <p className="px-4 pb-1 text-xs text-[#64748B]">
+          <p className="px-4 pb-1 text-xs text-muted-foreground">
             {typingNames.join(", ")} typing…
           </p>
         ) : null}
@@ -428,7 +428,7 @@ function ChatPane({
             members={conversation.data?.members ?? []}
           />
         ) : (
-          <p className="border-t border-[#E5E7EB] px-4 py-3 text-sm text-muted-foreground">
+          <p className="border-t border-border px-4 py-3 text-sm text-muted-foreground">
             Viewers can read this conversation.
           </p>
         )}
@@ -505,28 +505,28 @@ function MessageRow({
   const react = useReactToMessage();
 
   return (
-    <div className={cn("group flex gap-2.5 rounded-md px-1 py-1.5 hover:bg-[#F8FAFC]")}>
-      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#EEF2FF] text-[10px] font-semibold text-primary">
+    <div className={cn("group flex gap-2.5 rounded-md px-1 py-1.5 hover:bg-muted")}>
+      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[10px] font-semibold text-primary">
         {initials(message.author.name)}
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
-          <p className="text-[13px] font-medium text-[#172033]">{message.author.name}</p>
-          <p className="text-[11px] text-[#94A3B8]">
+          <p className="text-[13px] font-medium text-foreground">{message.author.name}</p>
+          <p className="text-[11px] text-subtle-foreground">
             {formatRelativeTime(message.createdAt)}
           </p>
         </div>
         {parent ? (
-          <p className="mt-1 truncate border-l-2 border-[#E5E7EB] pl-2 text-[12px] text-[#64748B]">
+          <p className="mt-1 truncate border-l-2 border-border pl-2 text-[12px] text-muted-foreground">
             {parent.author.name}: {parent.body}
           </p>
         ) : null}
-        <div className="relative mt-0.5 text-[13px] leading-5 text-[#172033]">
+        <div className="relative mt-0.5 text-[13px] leading-5 text-foreground">
           <MentionText body={message.body} />
           {canWrite ? (
             <button
               type="button"
-              className="absolute -right-2 -top-2 hidden rounded-full border border-[#E5E7EB] bg-white p-1 text-[#64748B] shadow-sm group-hover:block"
+              className="absolute -right-2 -top-2 hidden rounded-full border border-border bg-card p-1 text-muted-foreground shadow-sm group-hover:block"
               onClick={() => setMenu((open) => !open)}
               aria-label="Message actions"
             >
@@ -589,7 +589,7 @@ function MessageRow({
               <button
                 key={reaction.emoji}
                 type="button"
-                className="rounded-full border border-[#E5E7EB] bg-slate-50 px-2 py-0.5 text-xs"
+                className="rounded-full border border-border bg-muted px-2 py-0.5 text-xs"
                 onClick={() =>
                   canWrite
                     ? void react.mutateAsync({
@@ -617,7 +617,7 @@ function MessageRow({
         {message.task ? (
           <Link
             href={`/app/tasks/${message.task.id}`}
-            className="mt-1 inline-flex rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-primary"
+            className="mt-1 inline-flex rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary"
           >
             Created Task · {message.task.title}
           </Link>
@@ -724,11 +724,11 @@ function Composer({
   return (
     <form
       id={`composer-${conversationId}`}
-      className="relative border-t border-[#E5E7EB] p-3"
+      className="relative border-t border-border p-3"
       onSubmit={(event) => void submit(event)}
     >
       {reply ? (
-        <div className="mb-2 flex items-center justify-between rounded-lg bg-slate-50 px-2 py-1 text-xs text-[#64748B]">
+        <div className="mb-2 flex items-center justify-between rounded-lg bg-muted px-2 py-1 text-xs text-muted-foreground">
           <span>Replying to {reply.author.name}</span>
           <button type="button" onClick={() => setReply(null)}>
             Dismiss
@@ -755,7 +755,7 @@ function Composer({
         </div>
       ) : null}
       <div className="flex items-end gap-2">
-        <label className="cursor-pointer rounded-lg p-2 text-[#64748B] hover:bg-secondary">
+        <label className="cursor-pointer rounded-lg p-2 text-muted-foreground hover:bg-secondary">
           <Paperclip className="h-4 w-4" />
           <input
             type="file"
@@ -811,34 +811,34 @@ function ConversationDetails({
 }) {
   const realtime = useRealtime();
   if (!conversation) {
-    return <aside className="hidden w-[280px] shrink-0 border-l border-[#E5E7EB] lg:block" />;
+    return <aside className="hidden w-[280px] shrink-0 border-l border-border lg:block" />;
   }
   const other = otherMember(conversation, userId);
   return (
-    <aside className="hidden w-[260px] shrink-0 overflow-y-auto border-l border-[#E5E7EB] bg-white p-4 lg:block">
-      <p className="text-xs font-medium uppercase tracking-wide text-[#64748B]">
+    <aside className="hidden w-[260px] shrink-0 overflow-y-auto border-l border-border bg-card p-4 lg:block">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         Details
       </p>
-      <h2 className="mt-1 text-sm font-semibold text-[#172033]">
+      <h2 className="mt-1 text-sm font-semibold text-foreground">
         {conversationTitle(conversation, userId)}
       </h2>
       {conversation.description ? (
-        <p className="mt-2 text-sm text-[#64748B]">{conversation.description}</p>
+        <p className="mt-2 text-sm text-muted-foreground">{conversation.description}</p>
       ) : null}
       <dl className="mt-4 space-y-2 text-sm">
         <div>
-          <dt className="text-xs text-[#94A3B8]">Privacy</dt>
+          <dt className="text-xs text-subtle-foreground">Privacy</dt>
           <dd>{conversation.privacy === "PRIVATE" ? "Private" : "Public"}</dd>
         </div>
         {conversation.team ? (
           <div>
-            <dt className="text-xs text-[#94A3B8]">Team</dt>
+            <dt className="text-xs text-subtle-foreground">Team</dt>
             <dd>{conversation.team.name}</dd>
           </div>
         ) : null}
         {conversation.project ? (
           <div>
-            <dt className="text-xs text-[#94A3B8]">Project</dt>
+            <dt className="text-xs text-subtle-foreground">Project</dt>
             <dd>
               <Link
                 href={`/app/projects/${conversation.project.id}`}
@@ -851,7 +851,7 @@ function ConversationDetails({
         ) : null}
         {conversation.kind === "DIRECT" && other ? (
           <div>
-            <dt className="text-xs text-[#94A3B8]">Status</dt>
+            <dt className="text-xs text-subtle-foreground">Status</dt>
             <dd>
               {realtime.onlineUserIds.has(other.userId) || other.online
                 ? "Online"
@@ -862,7 +862,7 @@ function ConversationDetails({
           </div>
         ) : null}
       </dl>
-      <p className="mt-6 text-xs font-medium uppercase tracking-wide text-[#64748B]">
+      <p className="mt-6 text-xs font-medium uppercase tracking-wide text-muted-foreground">
         Members
       </p>
       <ul className="mt-2 space-y-2">
@@ -871,13 +871,13 @@ function ConversationDetails({
             realtime.onlineUserIds.has(member.userId) || member.online;
           return (
             <li key={member.userId} className="flex items-center gap-2">
-              <span className="relative flex h-7 w-7 items-center justify-center rounded-full bg-indigo-50 text-[10px] font-semibold text-primary">
+              <span className="relative flex h-7 w-7 items-center justify-center rounded-full bg-primary-soft text-[10px] font-semibold text-primary">
                 {initials(member.user.name)}
                 <PresenceDot online={online} />
               </span>
               <div className="min-w-0">
                 <p className="truncate text-sm">{member.user.name}</p>
-                <p className="text-xs text-[#94A3B8]">
+                <p className="text-xs text-subtle-foreground">
                   {online
                     ? "Online"
                     : formatRelativeTime(

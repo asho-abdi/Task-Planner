@@ -169,7 +169,7 @@ function SidebarNavLink({
         collapsed ? (
           <span className="absolute ml-4 mt-[-10px] h-1.5 w-1.5 rounded-full bg-primary" />
         ) : (
-          <span className="ml-auto rounded-md bg-white/10 px-1.5 py-px text-[10px] font-semibold tabular-nums text-white">
+          <span className="ml-auto rounded-md bg-card/10 px-1.5 py-px text-[10px] font-semibold tabular-nums text-white">
             {badge > 99 ? "99+" : badge}
           </span>
         )
@@ -336,10 +336,10 @@ export function AppShell({ user, children }: AppShellProps) {
           <div key={group.label} className="space-y-0.5">
             {collapsed ? (
               index > 0 ? (
-                <div className="mx-auto my-2 h-px w-5 bg-white/10" />
+                <div className="mx-auto my-2 h-px w-5 bg-card/10" />
               ) : null
             ) : (
-              <p className="px-2 pb-1.5 pt-1 text-[11px] font-extrabold uppercase leading-[1.2] tracking-[0.10em] text-[#64748B]">
+              <p className="px-2 pb-1.5 pt-1 text-[11px] font-extrabold uppercase leading-[1.2] tracking-[0.10em] text-muted-foreground">
                 {group.label}
               </p>
             )}
@@ -368,7 +368,7 @@ export function AppShell({ user, children }: AppShellProps) {
             collapsed && "justify-center px-0",
           )}
         >
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#1E293B] text-[10px] font-semibold text-white">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-foreground text-[10px] font-semibold text-white">
             {initials}
           </div>
           {!collapsed ? (
@@ -376,7 +376,7 @@ export function AppShell({ user, children }: AppShellProps) {
               <p className="truncate text-[14px] font-bold leading-[1.3] text-white">
                 {user.name}
               </p>
-              <p className="truncate text-[12px] font-medium leading-[1.4] text-[#64748B]">
+              <p className="truncate text-[12px] font-medium leading-[1.4] text-muted-foreground">
                 {user.email}
               </p>
             </div>
@@ -438,11 +438,11 @@ export function AppShell({ user, children }: AppShellProps) {
           collapsed ? "lg:ml-[72px]" : "lg:ml-[240px]",
         )}
       >
-        <header className="z-30 flex h-14 shrink-0 items-center gap-3 border-b border-[#E5E7EB] bg-white px-3 sm:px-5">
+        <header className="z-30 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-3 sm:px-5">
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-[#64748B] lg:hidden"
+            className="h-8 w-8 text-muted-foreground lg:hidden"
             onClick={() => setMobileOpen(true)}
             aria-label="Open navigation"
           >
@@ -451,31 +451,31 @@ export function AppShell({ user, children }: AppShellProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="hidden h-8 w-8 text-[#64748B] hover:text-[#172033] lg:inline-flex"
+            className="hidden h-8 w-8 text-muted-foreground hover:text-foreground lg:inline-flex"
             onClick={toggleCollapsed}
             aria-label="Collapse sidebar"
           >
             <PanelLeft />
           </Button>
-          <h1 className="hidden min-w-0 shrink-0 text-[18px] font-bold leading-[1.2] tracking-[-0.02em] text-[#172033] md:block lg:text-[19px]">
+          <h1 className="hidden min-w-0 shrink-0 text-[18px] font-bold leading-[1.2] tracking-[-0.02em] text-foreground md:block lg:text-[19px]">
             {pageTitle(pathname, navGroups)}
           </h1>
           <form
             className="relative min-w-0 flex-1"
             onSubmit={submitSearch}
           >
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#94A3B8]" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-subtle-foreground" />
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search tasks"
-              className="h-8 max-w-lg rounded-md border-[#E5E7EB] bg-[#F8FAFC] pl-9 pr-16 text-[14px] font-medium shadow-none placeholder:font-normal placeholder:text-[#94A3B8]"
+              className="h-8 max-w-lg rounded-md border-border bg-muted pl-9 pr-16 text-[14px] font-medium shadow-none placeholder:font-normal placeholder:text-subtle-foreground"
               aria-label="Search tasks"
             />
             <button
               type="button"
               onClick={() => setCommandOpen(true)}
-              className="absolute right-1.5 top-1/2 hidden -translate-y-1/2 items-center rounded border border-[#E5E7EB] bg-white px-1.5 py-0.5 text-[12px] font-semibold leading-none text-[#94A3B8] sm:inline-flex"
+              className="absolute right-1.5 top-1/2 hidden -translate-y-1/2 items-center rounded border border-border bg-card px-1.5 py-0.5 text-[12px] font-semibold leading-none text-subtle-foreground sm:inline-flex"
             >
               Ctrl K
             </button>
@@ -492,7 +492,7 @@ export function AppShell({ user, children }: AppShellProps) {
                   );
                 }}
                 onPointerDown={(event) => event.stopPropagation()}
-                className="relative flex h-8 w-8 items-center justify-center rounded-md text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#172033]"
+                className="relative flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 <Bell className="h-4 w-4" strokeWidth={1.75} />
                 {unreadCount > 0 ? (
@@ -501,11 +501,11 @@ export function AppShell({ user, children }: AppShellProps) {
               </button>
               {headerMenu === "notify" ? (
                 <div
-                  className="absolute right-0 top-10 z-40 w-80 overflow-hidden rounded-lg border border-[#E5E7EB] bg-white shadow-[0_12px_32px_rgba(15,23,42,0.1)]"
+                  className="absolute right-0 top-10 z-40 w-80 overflow-hidden rounded-lg border border-border bg-card shadow-[0_12px_32px_rgba(15,23,42,0.1)]"
                   onPointerDown={(event) => event.stopPropagation()}
                 >
-                  <div className="flex items-center justify-between gap-2 border-b border-[#E5E7EB] px-3 py-2.5">
-                    <p className="text-[14px] font-bold text-[#172033]">
+                  <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2.5">
+                    <p className="text-[14px] font-bold text-foreground">
                       Notifications
                     </p>
                     {unreadCount > 0 ? (
@@ -520,7 +520,7 @@ export function AppShell({ user, children }: AppShellProps) {
                   </div>
                   <div className="max-h-72 overflow-y-auto">
                     {(notifications.data?.items ?? []).length === 0 ? (
-                      <p className="px-3 py-6 text-[14px] font-medium text-[#64748B]">
+                      <p className="px-3 py-6 text-[14px] font-medium text-muted-foreground">
                         You&apos;re all caught up.
                       </p>
                     ) : (
@@ -529,8 +529,8 @@ export function AppShell({ user, children }: AppShellProps) {
                           key={item.id}
                           type="button"
                           className={cn(
-                            "relative block w-full border-b border-[#F1F5F9] px-3 py-2.5 text-left last:border-0 hover:bg-[#F8FAFC]",
-                            !item.isRead && "bg-[#F8FAFC]",
+                            "relative block w-full border-b border-muted px-3 py-2.5 text-left last:border-0 hover:bg-muted",
+                            !item.isRead && "bg-muted",
                           )}
                           onClick={() => {
                             setHeaderMenu(null);
@@ -541,10 +541,10 @@ export function AppShell({ user, children }: AppShellProps) {
                           {!item.isRead ? (
                             <span className="absolute left-0 top-3 bottom-3 w-[2px] bg-primary" />
                           ) : null}
-                          <p className="text-[14px] font-semibold text-[#172033]">
+                          <p className="text-[14px] font-semibold text-foreground">
                             {item.title}
                           </p>
-                          <p className="mt-0.5 line-clamp-2 text-[12px] font-medium text-[#64748B]">
+                          <p className="mt-0.5 line-clamp-2 text-[12px] font-medium text-muted-foreground">
                             {item.message}
                           </p>
                         </button>
@@ -553,7 +553,7 @@ export function AppShell({ user, children }: AppShellProps) {
                   </div>
                   <Link
                     href="/app/notifications"
-                    className="block border-t border-[#E5E7EB] px-3 py-2 text-center text-[13px] font-semibold text-primary"
+                    className="block border-t border-border px-3 py-2 text-center text-[13px] font-semibold text-primary"
                     onClick={() => setHeaderMenu(null)}
                   >
                     View all
@@ -578,14 +578,14 @@ export function AppShell({ user, children }: AppShellProps) {
               </Button>
               {headerMenu === "create" ? (
                 <div
-                  className="absolute right-0 top-10 z-40 w-44 overflow-hidden rounded-lg border border-[#E5E7EB] bg-white py-1 shadow-[0_12px_32px_rgba(15,23,42,0.1)]"
+                  className="absolute right-0 top-10 z-40 w-44 overflow-hidden rounded-lg border border-border bg-card py-1 shadow-[0_12px_32px_rgba(15,23,42,0.1)]"
                   onPointerDown={(event) => event.stopPropagation()}
                 >
                   {CREATE_ITEMS.map((item) => (
                     <button
                       key={item.type}
                       type="button"
-                      className="flex w-full px-3 py-1.5 text-left text-[14px] font-medium text-[#172033] hover:bg-[#F8FAFC]"
+                      className="flex w-full px-3 py-1.5 text-left text-[14px] font-medium text-foreground hover:bg-muted"
                       onPointerDown={(event) => {
                         event.preventDefault();
                         event.stopPropagation();
@@ -601,12 +601,12 @@ export function AppShell({ user, children }: AppShellProps) {
             <Link
               href="/app/settings"
               title={user.name}
-              className="ml-1 hidden h-8 items-center gap-2 rounded-md pl-1 pr-2 hover:bg-[#F8FAFC] sm:flex"
+              className="ml-1 hidden h-8 items-center gap-2 rounded-md pl-1 pr-2 hover:bg-muted sm:flex"
             >
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-white">
                 {initials}
               </span>
-              <span className="max-w-[120px] truncate text-[14px] font-bold text-[#172033]">
+              <span className="max-w-[120px] truncate text-[14px] font-bold text-foreground">
                 {user.name.split(" ")[0]}
               </span>
             </Link>

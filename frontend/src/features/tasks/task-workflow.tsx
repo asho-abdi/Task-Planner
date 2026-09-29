@@ -43,7 +43,7 @@ import {
 } from "@/lib/utils";
 
 const workspaceCard =
-  "rounded-2xl border-[#E5E7EB] shadow-[0_1px_2px_rgba(15,23,42,0.04)]";
+  "rounded-2xl border-border shadow-[0_1px_2px_rgba(15,23,42,0.04)]";
 
 function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
@@ -92,23 +92,23 @@ function FileCard({
   file: { id: string; originalName: string; mimeType: string; sizeBytes: number };
 }) {
   return (
-    <div className="flex items-start justify-between gap-3 rounded-xl border border-[#E5E7EB] bg-white px-3.5 py-3 transition-colors hover:bg-slate-50">
+    <div className="flex items-start justify-between gap-3 rounded-xl border border-border bg-card px-3.5 py-3 transition-colors hover:bg-muted">
       <div className="flex min-w-0 items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-primary">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
           <FileTypeIcon name={file.originalName} mime={file.mimeType} />
         </span>
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-[#172033]">
+          <p className="truncate text-sm font-medium text-foreground">
             {file.originalName}
           </p>
-          <p className="mt-0.5 text-xs text-[#64748B]">
+          <p className="mt-0.5 text-xs text-muted-foreground">
             {fileKind(file.originalName, file.mimeType)} · {formatSize(file.sizeBytes)}
           </p>
         </div>
       </div>
       <button
         type="button"
-        className="shrink-0 text-xs font-medium text-primary transition-colors hover:text-[#5147E8]"
+        className="shrink-0 text-xs font-medium text-primary transition-colors hover:text-primary-hover"
         onClick={() => void downloadFile(file.id, file.originalName)}
       >
         Download
@@ -282,13 +282,13 @@ export function TaskWorkPanel({
         </CardHeader>
         <CardContent className="space-y-5">
           {task.blocked && (task.blockedBy ?? task.dependsOn)[0] ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            <div className="rounded-xl border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning-soft-foreground">
               🔒 Blocked by “{(task.blockedBy ?? task.dependsOn)[0].title}”
             </div>
           ) : null}
           {task.latestReturnComment ? (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-              <p className="text-xs font-medium uppercase tracking-wide text-amber-800">
+            <div className="rounded-xl border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning-soft-foreground">
+              <p className="text-xs font-medium uppercase tracking-wide text-warning-soft-foreground">
                 Returned
               </p>
               <p className="mt-1">{task.latestReturnComment}</p>
@@ -301,23 +301,23 @@ export function TaskWorkPanel({
                   <span
                     className={cn(
                       "mt-1 h-2.5 w-2.5 rounded-full",
-                      item.done ? "bg-primary" : "border-2 border-[#CBD5E1] bg-white",
+                      item.done ? "bg-primary" : "border-2 border-border-strong bg-card",
                     )}
                   />
                   {index < timeline.length - 1 ? (
-                    <span className="min-h-8 w-px flex-1 bg-[#E5E7EB]" />
+                    <span className="min-h-8 w-px flex-1 bg-border" />
                   ) : null}
                 </div>
                 <div className="pb-5">
                   <p
                     className={cn(
                       "text-sm font-medium",
-                      item.done ? "text-[#172033]" : "text-[#64748B]",
+                      item.done ? "text-foreground" : "text-muted-foreground",
                     )}
                   >
                     {item.label}
                   </p>
-                  <p className="mt-0.5 text-xs text-[#64748B]">
+                  <p className="mt-0.5 text-xs text-muted-foreground">
                     {item.at ? formatDateTime(item.at) : "Pending"}
                   </p>
                 </div>
@@ -572,13 +572,13 @@ export function TaskReviewPanel({
         </CardHeader>
         <CardContent className="space-y-5">
           {(task.assigneeWork ?? []).length > 1 ? (
-            <ul className="space-y-2 rounded-xl border border-[#E5E7EB] px-3.5 py-3">
+            <ul className="space-y-2 rounded-xl border border-border px-3.5 py-3">
               {(task.assigneeWork ?? []).map((person) => (
                 <li
                   key={person.userId}
                   className="flex items-center justify-between gap-3 text-sm"
                 >
-                  <span className="font-medium text-[#172033]">{person.name}</span>
+                  <span className="font-medium text-foreground">{person.name}</span>
                   <StatusBadge value={person.status} />
                 </li>
               ))}
@@ -596,13 +596,13 @@ export function TaskReviewPanel({
                     className={cn(
                       "flex w-full items-center justify-between rounded-xl border px-3.5 py-2.5 text-left transition-colors",
                       active
-                        ? "border-primary/30 bg-indigo-50/70"
-                        : "border-[#E5E7EB] bg-white hover:bg-slate-50",
+                        ? "border-primary/30 bg-primary-soft"
+                        : "border-border bg-card hover:bg-muted",
                     )}
                   >
                     <div>
                       <p className="text-sm font-medium">Version {item.version}</p>
-                      <p className="text-xs text-[#64748B]">
+                      <p className="text-xs text-muted-foreground">
                         Submitted {formatDate(item.createdAt)}
                       </p>
                     </div>
@@ -614,11 +614,11 @@ export function TaskReviewPanel({
           ) : null}
 
           {!selected ? (
-            <div className="rounded-xl border border-dashed border-[#E5E7EB] px-5 py-8 text-center">
-              <p className="text-sm font-medium text-[#172033]">
+            <div className="rounded-xl border border-dashed border-border px-5 py-8 text-center">
+              <p className="text-sm font-medium text-foreground">
                 No work has been submitted yet
               </p>
-              <p className="mt-1 text-sm text-[#64748B]">
+              <p className="mt-1 text-sm text-muted-foreground">
                 Assignee uploads and notes will appear here after submit.
               </p>
             </div>
@@ -626,26 +626,26 @@ export function TaskReviewPanel({
             <div className="space-y-5">
               <div className="grid gap-4 sm:grid-cols-3">
                 <div>
-                  <p className="text-[12px] font-medium uppercase tracking-wide text-[#64748B]">
+                  <p className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">
                     Submitted by
                   </p>
-                  <p className="mt-1 text-sm font-medium text-[#172033]">
+                  <p className="mt-1 text-sm font-medium text-foreground">
                     {selected.submitter.name}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[12px] font-medium uppercase tracking-wide text-[#64748B]">
+                  <p className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">
                     Version
                   </p>
-                  <p className="mt-1 text-sm font-medium text-[#172033]">
+                  <p className="mt-1 text-sm font-medium text-foreground">
                     Version {selected.version}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[12px] font-medium uppercase tracking-wide text-[#64748B]">
+                  <p className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">
                     Submitted
                   </p>
-                  <p className="mt-1 text-sm font-medium text-[#172033]">
+                  <p className="mt-1 text-sm font-medium text-foreground">
                     {formatDateTime(selected.createdAt)}
                   </p>
                 </div>
@@ -653,35 +653,35 @@ export function TaskReviewPanel({
 
               <div className="space-y-4">
                 <div>
-                  <p className="text-[13px] font-semibold text-[#172033]">
+                  <p className="text-[13px] font-semibold text-foreground">
                     Submission Notes
                   </p>
-                  <p className="mt-1 text-sm leading-6 text-[#64748B]">
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
                     {selected.note || "No notes were added."}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[13px] font-semibold text-[#172033]">
+                  <p className="text-[13px] font-semibold text-foreground">
                     Deliverables
                   </p>
-                  <p className="mt-1 text-sm leading-6 text-[#64748B]">
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
                     {selected.deliverables || "No deliverables summary."}
                   </p>
                 </div>
                 <div>
-                  <p className="text-[13px] font-semibold text-[#172033]">
+                  <p className="text-[13px] font-semibold text-foreground">
                     Justification
                   </p>
-                  <p className="mt-1 text-sm leading-6 text-[#64748B]">
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
                     {selected.justification || "No justification provided."}
                   </p>
                 </div>
                 {selected.reviewNote ? (
                   <div>
-                    <p className="text-[13px] font-semibold text-[#172033]">
+                    <p className="text-[13px] font-semibold text-foreground">
                       Reviewer comment
                     </p>
-                    <p className="mt-1 text-sm leading-6 text-[#64748B]">
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
                       {selected.reviewNote}
                     </p>
                   </div>
@@ -689,7 +689,7 @@ export function TaskReviewPanel({
               </div>
 
               <div className="space-y-2">
-                <p className="text-[12px] font-medium uppercase tracking-wide text-[#64748B]">
+                <p className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">
                   Submitted files
                 </p>
                 {(selected.files ?? []).length ? (
@@ -699,11 +699,11 @@ export function TaskReviewPanel({
                     ))}
                   </div>
                 ) : (
-                  <div className="rounded-xl border border-dashed border-[#E5E7EB] px-4 py-6 text-center">
-                    <p className="text-sm font-medium text-[#172033]">
+                  <div className="rounded-xl border border-dashed border-border px-4 py-6 text-center">
+                    <p className="text-sm font-medium text-foreground">
                       No files attached
                     </p>
-                    <p className="mt-1 text-sm text-[#64748B]">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       This submission was sent without an upload.
                     </p>
                   </div>
@@ -713,15 +713,15 @@ export function TaskReviewPanel({
           )}
 
           {ctx.canReview ? (
-            <div className="flex flex-col gap-3 rounded-xl border border-[#E5E7EB] bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm font-medium text-[#172033]">
+            <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-medium text-foreground">
                 Review complete?
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
                   variant="outline"
-                  className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                  className="border-danger/30 text-danger-soft-foreground hover:bg-danger-soft hover:text-danger-soft-foreground"
                   onClick={() => setReturnOpen(true)}
                   disabled={!returnTarget}
                 >
@@ -907,7 +907,7 @@ export function TaskCommentsSection({
         {(comments.data ?? []).length ? (
           <ul className="space-y-3">
             {roots.map((item) => (
-              <li key={item.id} className="rounded-xl border border-[#E5E7EB] px-4 py-3">
+              <li key={item.id} className="rounded-xl border border-border px-4 py-3">
                 <CommentBody
                   item={item}
                   canWrite={canWrite}
@@ -919,7 +919,7 @@ export function TaskCommentsSection({
                 {repliesOf(item.id).map((reply) => (
                   <div
                     key={reply.id}
-                    className="mt-3 ml-4 rounded-lg border border-[#E5E7EB] bg-slate-50 px-3 py-2"
+                    className="mt-3 ml-4 rounded-lg border border-border bg-muted px-3 py-2"
                   >
                     <CommentBody
                       item={reply}
@@ -935,9 +935,9 @@ export function TaskCommentsSection({
             ))}
           </ul>
         ) : (
-          <div className="rounded-xl border border-dashed border-[#E5E7EB] px-4 py-6 text-center">
-            <p className="text-sm font-medium text-[#172033]">No comments yet</p>
-            <p className="mt-1 text-sm text-[#64748B]">
+          <div className="rounded-xl border border-dashed border-border px-4 py-6 text-center">
+            <p className="text-sm font-medium text-foreground">No comments yet</p>
+            <p className="mt-1 text-sm text-muted-foreground">
               Add a note for the assignee or reviewer.
             </p>
           </div>
@@ -945,7 +945,7 @@ export function TaskCommentsSection({
         {canWrite ? (
           <form className="space-y-2" onSubmit={(event) => void submit(event)}>
             {replyId ? (
-              <p className="text-xs text-[#64748B]">
+              <p className="text-xs text-muted-foreground">
                 Replying{" "}
                 <button type="button" onClick={() => setReplyId(null)}>
                   · cancel
@@ -1010,12 +1010,12 @@ function CommentBody({
   return (
     <>
       <div className="flex items-center gap-2">
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-50 text-[11px] font-semibold text-primary">
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-soft text-[11px] font-semibold text-primary">
           {initials(item.author.name)}
         </span>
-        <p className="text-sm font-medium text-[#172033]">{item.author.name}</p>
+        <p className="text-sm font-medium text-foreground">{item.author.name}</p>
       </div>
-      <p className="mt-2 text-sm leading-6 text-[#172033]">
+      <p className="mt-2 text-sm leading-6 text-foreground">
         {parts.map((part, index) =>
           part.startsWith("@") ? (
             <span key={`${part}-${index}`} className="font-medium text-primary">
@@ -1045,7 +1045,7 @@ function CommentBody({
           <button
             key={reaction.emoji}
             type="button"
-            className="rounded-full bg-slate-50 px-2 py-0.5 text-xs"
+            className="rounded-full bg-muted px-2 py-0.5 text-xs"
             onClick={() => onReact(reaction.emoji)}
           >
             {reaction.emoji} {reaction.count}
@@ -1057,7 +1057,7 @@ function CommentBody({
               <button
                 key={emoji}
                 type="button"
-                className="text-xs text-[#94A3B8]"
+                className="text-xs text-subtle-foreground"
                 onClick={() => onReact(emoji)}
               >
                 {emoji}
@@ -1072,7 +1072,7 @@ function CommentBody({
             </button>
           </>
         ) : null}
-        <p className="ml-auto text-xs text-[#64748B]">
+        <p className="ml-auto text-xs text-muted-foreground">
           {formatDateTime(item.createdAt)}
         </p>
       </div>

@@ -29,15 +29,15 @@ export function TeamCard({
     <Surface className="p-0 sm:p-0">
       <div className="flex items-start justify-between gap-3 px-4 py-3.5">
         <div className="flex min-w-0 items-start gap-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#EEF2FF] text-[12px] font-semibold text-primary">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary-soft text-[12px] font-semibold text-primary">
             {team.icon || team.name.slice(0, 1).toUpperCase()}
           </span>
           <div className="min-w-0">
-            <h2 className="text-[13px] font-medium text-[#172033]">{team.name}</h2>
+            <h2 className="text-[13px] font-medium text-foreground">{team.name}</h2>
             {team.description ? (
-              <p className="mt-0.5 text-[12px] text-[#64748B]">{team.description}</p>
+              <p className="mt-0.5 text-[12px] text-muted-foreground">{team.description}</p>
             ) : null}
-            <p className="mt-1 text-[12px] text-[#64748B]">
+            <p className="mt-1 text-[12px] text-muted-foreground">
               {team._count.members} members · {team.activeTaskCount} active tasks
             </p>
           </div>
@@ -52,7 +52,7 @@ export function TeamCard({
       />
       {canAdmin ? (
         <form
-          className="flex gap-2 border-t border-[#E5E7EB] px-4 py-3"
+          className="flex gap-2 border-t border-border px-4 py-3"
           onSubmit={(event) => {
             event.preventDefault();
             onAdd();
@@ -91,7 +91,7 @@ export function TeamMembers({
   onRole: (userId: string, role: "ADMIN" | "MEMBER") => void;
 }) {
   return (
-    <ul className="border-t border-[#E5E7EB] text-sm">
+    <ul className="border-t border-border text-sm">
       {team.members.map((member) => (
         <li
           key={member.id}

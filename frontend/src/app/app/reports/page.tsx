@@ -59,12 +59,12 @@ type RangePreset = "today" | "week" | "month" | "30" | "90" | "custom";
 type TrendGrain = "daily" | "weekly" | "monthly";
 
 const STATUS_SLICES: Array<{ key: string; color: string }> = [
-  { key: "TODO", color: "#94A3B8" },
-  { key: "IN_PROGRESS", color: "#635BFF" },
-  { key: "IN_REVIEW", color: "#F59E0B" },
-  { key: "COMPLETED", color: "#16A34A" },
-  { key: "RETURNED", color: "#F97316" },
-  { key: "OVERDUE", color: "#EF4444" },
+  { key: "TODO", color: "var(--chart-6)" },
+  { key: "IN_PROGRESS", color: "var(--chart-1)" },
+  { key: "IN_REVIEW", color: "var(--chart-3)" },
+  { key: "COMPLETED", color: "var(--success)" },
+  { key: "RETURNED", color: "var(--chart-4)" },
+  { key: "OVERDUE", color: "var(--danger)" },
 ];
 
 function shiftYmd(value: string, days: number) {
@@ -161,12 +161,12 @@ function bucketTrends(
 
 function projectHealth(completed: number, open: number, overdue: number) {
   if (overdue > 0 && completed + open > 0 && overdue / (completed + open) >= 0.25) {
-    return { label: "Delayed", className: "bg-red-50 text-[#EF4444]" };
+    return { label: "Delayed", className: "bg-danger-soft text-danger" };
   }
   if (overdue > 0) {
-    return { label: "At risk", className: "bg-amber-50 text-[#D97706]" };
+    return { label: "At risk", className: "bg-warning-soft text-warning" };
   }
-  return { label: "Healthy", className: "bg-emerald-50 text-[#16A34A]" };
+  return { label: "Healthy", className: "bg-success-soft text-success" };
 }
 
 function downloadCsv(filename: string, rows: string[][]) {
@@ -505,17 +505,17 @@ export default function ReportsPage() {
                 Export
               </Button>
               {exportOpen ? (
-                <div className="absolute right-0 z-20 mt-1 w-40 overflow-hidden rounded-lg border border-[#E5E7EB] bg-white py-1 shadow-[0_12px_32px_rgba(15,23,42,0.1)]">
+                <div className="absolute right-0 z-20 mt-1 w-40 overflow-hidden rounded-lg border border-border bg-card py-1 shadow-[0_12px_32px_rgba(15,23,42,0.1)]">
                   <button
                     type="button"
-                    className="block w-full px-3 py-1.5 text-left text-[13px] hover:bg-[#F8FAFC]"
+                    className="block w-full px-3 py-1.5 text-left text-[13px] hover:bg-muted"
                     onClick={exportCsv}
                   >
                     Export CSV
                   </button>
                   <button
                     type="button"
-                    className="block w-full px-3 py-1.5 text-left text-[13px] hover:bg-[#F8FAFC]"
+                    className="block w-full px-3 py-1.5 text-left text-[13px] hover:bg-muted"
                     onClick={() => {
                       setExportOpen(false);
                       window.print();
@@ -534,7 +534,7 @@ export default function ReportsPage() {
         }
       />
 
-      <p className="text-[12px] text-[#94A3B8]">
+      <p className="text-[12px] text-subtle-foreground">
         {formatDate(from)} – {formatDate(to)}
       </p>
 
@@ -559,12 +559,12 @@ export default function ReportsPage() {
 
       <Surface className="no-print space-y-3 p-4 sm:p-4">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[13px] font-medium text-[#172033]">Filters</p>
+          <p className="text-[13px] font-medium text-foreground">Filters</p>
           <div className="flex items-center gap-3">
             {hasFilters ? (
               <button
                 type="button"
-                className="text-[12px] font-medium text-[#64748B] hover:text-[#172033]"
+                className="text-[12px] font-medium text-muted-foreground hover:text-foreground"
                 onClick={clearFilters}
               >
                 Clear filters
@@ -642,10 +642,10 @@ export default function ReportsPage() {
 
           <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
             <Surface>
-              <h2 className="text-[15px] font-bold tracking-[-0.02em] text-[#172033]">
+              <h2 className="text-[15px] font-bold tracking-[-0.02em] text-foreground">
                 Task overview
               </h2>
-              <p className="mt-0.5 text-[12px] text-[#64748B]">
+              <p className="mt-0.5 text-[12px] text-muted-foreground">
                 Status mix from live workspace tasks.
               </p>
               {donutTotal === 0 ? (
@@ -661,14 +661,14 @@ export default function ReportsPage() {
                       return (
                         <div key={slice.label}>
                           <div className="mb-1 flex items-center justify-between text-[12px]">
-                            <span className="flex items-center gap-2 text-[#64748B]">
+                            <span className="flex items-center gap-2 text-muted-foreground">
                               <span
                                 className="h-2 w-2 rounded-full"
                                 style={{ background: slice.color }}
                               />
                               {slice.label}
                             </span>
-                            <span className="tabular-nums text-[#172033]">
+                            <span className="tabular-nums text-foreground">
                               {slice.count} · {pct}%
                             </span>
                           </div>
@@ -684,10 +684,10 @@ export default function ReportsPage() {
             <Surface>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <h2 className="text-[15px] font-bold tracking-[-0.02em] text-[#172033]">
+                  <h2 className="text-[15px] font-bold tracking-[-0.02em] text-foreground">
                     Task completion trend
                   </h2>
-                  <p className="mt-0.5 text-[12px] text-[#64748B]">
+                  <p className="mt-0.5 text-[12px] text-muted-foreground">
                     Created vs completed in the selected range.
                   </p>
                 </div>
@@ -711,21 +711,21 @@ export default function ReportsPage() {
                       {
                         label: "Created",
                         values: trendRows.map((row) => row.created),
-                        color: "#635BFF",
+                        color: "var(--chart-1)",
                       },
                       {
                         label: "Completed",
                         values: trendRows.map((row) => row.completed),
-                        color: "#16A34A",
+                        color: "var(--success)",
                       },
                     ]}
                   />
-                  <div className="mt-2 flex gap-4 text-[12px] text-[#64748B]">
+                  <div className="mt-2 flex gap-4 text-[12px] text-muted-foreground">
                     <span className="flex items-center gap-1.5">
                       <span className="h-2 w-2 rounded-full bg-primary" /> Created
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-[#16A34A]" />{" "}
+                      <span className="h-2 w-2 rounded-full bg-success" />{" "}
                       Completed
                     </span>
                   </div>
@@ -737,10 +737,10 @@ export default function ReportsPage() {
           <section className="space-y-3">
             <div className="flex items-end justify-between gap-3">
               <div>
-                <h2 className="text-[15px] font-bold tracking-[-0.02em] text-[#172033]">
+                <h2 className="text-[15px] font-bold tracking-[-0.02em] text-foreground">
                   Project performance
                 </h2>
-                <p className="text-[12px] text-[#64748B]">
+                <p className="text-[12px] text-muted-foreground">
                   Completion and health by project.
                 </p>
               </div>
@@ -750,7 +750,7 @@ export default function ReportsPage() {
             ) : (
               <ListPanel className="overflow-x-auto">
                 <table className="w-full min-w-[720px] text-left text-[13px]">
-                  <thead className="border-b border-[#E5E7EB] text-[11px] font-medium uppercase tracking-wide text-[#94A3B8]">
+                  <thead className="border-b border-border text-[11px] font-medium uppercase tracking-wide text-subtle-foreground">
                     <tr>
                       <th className="px-4 py-3">Project</th>
                       <th className="px-3 py-3">Total</th>
@@ -761,7 +761,7 @@ export default function ReportsPage() {
                       <th className="px-4 py-3">Health</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#E5E7EB]">
+                  <tbody className="divide-y divide-border">
                     {reports.data.projectPerformance.items.map((project) => {
                       const health = projectHealth(
                         project.completed,
@@ -770,12 +770,12 @@ export default function ReportsPage() {
                       );
                       const pct = Math.round(project.completionRate * 100);
                       return (
-                        <tr key={project.projectId ?? "none"} className="hover:bg-[#F8FAFC]">
+                        <tr key={project.projectId ?? "none"} className="hover:bg-muted">
                           <td className="px-4 py-3">
                             {project.projectId ? (
                               <Link
                                 href={`/app/projects/${project.projectId}`}
-                                className="font-medium text-[#172033] hover:text-primary"
+                                className="font-medium text-foreground hover:text-primary"
                               >
                                 {project.name}
                               </Link>
@@ -783,22 +783,22 @@ export default function ReportsPage() {
                               <span className="font-medium">{project.name}</span>
                             )}
                           </td>
-                          <td className="px-3 py-3 tabular-nums text-[#64748B]">
+                          <td className="px-3 py-3 tabular-nums text-muted-foreground">
                             {project.total}
                           </td>
-                          <td className="px-3 py-3 tabular-nums text-[#64748B]">
+                          <td className="px-3 py-3 tabular-nums text-muted-foreground">
                             {project.completed}
                           </td>
-                          <td className="px-3 py-3 tabular-nums text-[#64748B]">
+                          <td className="px-3 py-3 tabular-nums text-muted-foreground">
                             {project.open}
                           </td>
-                          <td className="px-3 py-3 tabular-nums text-[#64748B]">
+                          <td className="px-3 py-3 tabular-nums text-muted-foreground">
                             {project.overdue}
                           </td>
                           <td className="px-3 py-3">
                             <div className="flex items-center gap-2">
                               <Meter className="w-24" value={pct} />
-                              <span className="tabular-nums text-[#64748B]">
+                              <span className="tabular-nums text-muted-foreground">
                                 {pct}%
                               </span>
                             </div>
@@ -832,10 +832,10 @@ export default function ReportsPage() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Surface>
-              <h2 className="text-[15px] font-bold tracking-[-0.02em] text-[#172033]">
+              <h2 className="text-[15px] font-bold tracking-[-0.02em] text-foreground">
                 Team performance
               </h2>
-                <p className="mt-0.5 text-[12px] text-[#64748B]">
+                <p className="mt-0.5 text-[12px] text-muted-foreground">
                   Open load and capacity from live assignments.
                 </p>
                 {teamUsers.length === 0 ? (
@@ -845,9 +845,9 @@ export default function ReportsPage() {
                     {teamUsers.slice(0, 3).map((member, index) => (
                       <div
                         key={member.userId}
-                        className="flex items-center gap-3 rounded-lg bg-[#F8FAFC] px-3 py-2.5"
+                        className="flex items-center gap-3 rounded-lg bg-muted px-3 py-2.5"
                       >
-                        <span className="w-5 text-[12px] font-semibold text-[#94A3B8]">
+                        <span className="w-5 text-[12px] font-semibold text-subtle-foreground">
                           {index + 1}
                         </span>
                         <PersonAvatar name={member.name} size="sm" />
@@ -855,19 +855,19 @@ export default function ReportsPage() {
                           <p className="truncate text-[13px] font-medium">
                             {member.name}
                           </p>
-                          <p className="text-[12px] text-[#64748B]">
+                          <p className="text-[12px] text-muted-foreground">
                             {member.openTaskCount} open ·{" "}
                             {member.weekDeadlineCount} due this week
                           </p>
                         </div>
-                        <span className="text-[12px] tabular-nums text-[#64748B]">
+                        <span className="text-[12px] tabular-nums text-muted-foreground">
                           {Math.round(member.utilization * 100)}% load
                         </span>
                       </div>
                     ))}
                     <div className="overflow-x-auto">
                       <table className="w-full min-w-[480px] text-left text-[13px]">
-                        <thead className="text-[11px] uppercase tracking-wide text-[#94A3B8]">
+                        <thead className="text-[11px] uppercase tracking-wide text-subtle-foreground">
                           <tr>
                             <th className="py-2">Member</th>
                             <th>Open</th>
@@ -877,17 +877,17 @@ export default function ReportsPage() {
                         </thead>
                         <tbody>
                           {teamUsers.map((member) => (
-                            <tr key={member.userId} className="border-t border-[#F1F5F9]">
+                            <tr key={member.userId} className="border-t border-muted">
                               <td className="py-2">
                                 <div className="flex items-center gap-2">
                                   <PersonAvatar name={member.name} size="sm" />
                                   {member.name}
                                 </div>
                               </td>
-                              <td className="tabular-nums text-[#64748B]">
+                              <td className="tabular-nums text-muted-foreground">
                                 {member.openTaskCount}
                               </td>
-                              <td className="tabular-nums text-[#64748B]">
+                              <td className="tabular-nums text-muted-foreground">
                                 {member.weekDeadlineCount}
                               </td>
                               <td>
@@ -898,7 +898,7 @@ export default function ReportsPage() {
                                     danger={member.overloaded}
                                   />
                                   {member.overloaded ? (
-                                    <span className="text-[11px] text-[#EF4444]">
+                                    <span className="text-[11px] text-danger">
                                       High
                                     </span>
                                   ) : null}
@@ -914,38 +914,38 @@ export default function ReportsPage() {
               </Surface>
 
             <Surface>
-              <h2 className="text-[15px] font-bold tracking-[-0.02em] text-[#172033]">
+              <h2 className="text-[15px] font-bold tracking-[-0.02em] text-foreground">
                 My productivity
               </h2>
-              <p className="mt-0.5 text-[12px] text-[#64748B]">
+              <p className="mt-0.5 text-[12px] text-muted-foreground">
                 Your work for today, {user.data?.name?.split(" ")[0] ?? "you"}.
               </p>
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-[22px] font-semibold">{myAssigned}</p>
-                  <p className="text-[12px] text-[#64748B]">Assigned</p>
+                  <p className="text-[12px] text-muted-foreground">Assigned</p>
                 </div>
                 <div>
                   <p className="text-[22px] font-semibold">{myCompleted.length}</p>
-                  <p className="text-[12px] text-[#64748B]">Completed</p>
+                  <p className="text-[12px] text-muted-foreground">Completed</p>
                 </div>
                 <div>
                   <p className="text-[22px] font-semibold">{myOpen.length}</p>
-                  <p className="text-[12px] text-[#64748B]">Pending</p>
+                  <p className="text-[12px] text-muted-foreground">Pending</p>
                 </div>
                 <div>
                   <p className="text-[22px] font-semibold">{myOverdue.length}</p>
-                  <p className="text-[12px] text-[#64748B]">Overdue</p>
+                  <p className="text-[12px] text-muted-foreground">Overdue</p>
                 </div>
               </div>
-              <p className="mt-4 text-[12px] text-[#64748B]">Completion rate</p>
+              <p className="mt-4 text-[12px] text-muted-foreground">Completion rate</p>
               <Meter className="mt-1.5" value={myRate} />
               <p className="mt-1 text-[13px] font-medium">{myRate}%</p>
-              <p className="mt-3 text-[12px] text-[#94A3B8]">
+              <p className="mt-3 text-[12px] text-subtle-foreground">
                 Average completion time is not tracked in this workspace yet.
               </p>
               {dashboard.data ? (
-                <div className="mt-3 text-[12px] text-[#64748B]">
+                <div className="mt-3 text-[12px] text-muted-foreground">
                   Workspace snapshot: {dashboard.data.totals.completed} completed
                   · {dashboard.data.totals.overdue} overdue
                 </div>
@@ -954,10 +954,10 @@ export default function ReportsPage() {
           </div>
 
           <section>
-            <h2 className="text-[15px] font-bold tracking-[-0.02em] text-[#172033]">
+            <h2 className="text-[15px] font-bold tracking-[-0.02em] text-foreground">
               Attention required
             </h2>
-            <p className="mt-0.5 text-[12px] text-[#64748B]">
+            <p className="mt-0.5 text-[12px] text-muted-foreground">
               Overdue, returned, and waiting for review.
             </p>
             {attention.length === 0 && dueSoon.length === 0 ? (
@@ -965,7 +965,7 @@ export default function ReportsPage() {
             ) : (
               <ListPanel className="mt-3 overflow-x-auto">
                 <table className="w-full min-w-[720px] text-left text-[13px]">
-                  <thead className="border-b border-[#E5E7EB] text-[11px] uppercase tracking-wide text-[#94A3B8]">
+                  <thead className="border-b border-border text-[11px] uppercase tracking-wide text-subtle-foreground">
                     <tr>
                       <th className="px-4 py-3">Task</th>
                       <th className="px-3 py-3">Project</th>
@@ -975,9 +975,9 @@ export default function ReportsPage() {
                       <th className="px-4 py-3">Priority</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#E5E7EB]">
+                  <tbody className="divide-y divide-border">
                     {attention.map((task) => (
-                      <tr key={task.id} className="hover:bg-[#F8FAFC]">
+                      <tr key={task.id} className="hover:bg-muted">
                         <td className="px-4 py-3">
                           <Link
                             href={`/app/tasks/${task.id}`}
@@ -986,17 +986,17 @@ export default function ReportsPage() {
                             {task.title}
                           </Link>
                         </td>
-                        <td className="px-3 py-3 text-[#64748B]">
+                        <td className="px-3 py-3 text-muted-foreground">
                           {task.project?.name ?? "—"}
                         </td>
-                        <td className="px-3 py-3 text-[#64748B]">
+                        <td className="px-3 py-3 text-muted-foreground">
                           {(task.assignees ?? []).length
                             ? (task.assignees ?? [])
                                 .map((person) => person.name)
                                 .join(", ")
                             : (task.assignee?.name ?? "Unassigned")}
                         </td>
-                        <td className="px-3 py-3 text-[#64748B]">
+                        <td className="px-3 py-3 text-muted-foreground">
                           {formatDate(task.dueDate)}
                         </td>
                         <td className="px-3 py-3">
@@ -1010,8 +1010,8 @@ export default function ReportsPage() {
                   </tbody>
                 </table>
                 {dueSoon.length ? (
-                  <div className="border-t border-[#E5E7EB] px-4 py-3">
-                    <p className="text-[12px] font-medium text-[#64748B]">
+                  <div className="border-t border-border px-4 py-3">
+                    <p className="text-[12px] font-medium text-muted-foreground">
                       Due soon
                     </p>
                     <ul className="mt-2 space-y-1">
@@ -1022,7 +1022,7 @@ export default function ReportsPage() {
                             className="text-[13px] hover:text-primary"
                           >
                             {item.title}
-                            <span className="ml-2 text-[#94A3B8]">
+                            <span className="ml-2 text-subtle-foreground">
                               {formatDate(item.dueDate)}
                             </span>
                           </Link>
@@ -1036,27 +1036,27 @@ export default function ReportsPage() {
           </section>
 
           <Surface>
-            <h2 className="text-[15px] font-bold tracking-[-0.02em] text-[#172033]">
+            <h2 className="text-[15px] font-bold tracking-[-0.02em] text-foreground">
               Recent activity
             </h2>
-            <p className="mt-0.5 text-[12px] text-[#64748B]">
+            <p className="mt-0.5 text-[12px] text-muted-foreground">
               Completions, submissions, assignments, and related changes.
             </p>
             {recent.length === 0 ? (
               <EmptyState title="No recent activity" />
             ) : (
-              <ol className="mt-3 divide-y divide-[#F1F5F9]">
+              <ol className="mt-3 divide-y divide-muted">
                 {recent.map((item) => {
                   const href = activityHref(item.entityType, item.entityId);
                   const body = (
                     <div className="flex items-start justify-between gap-3 py-2.5">
-                      <p className="text-[13px] text-[#172033]">
+                      <p className="text-[13px] text-foreground">
                         <span className="font-medium">
                           {item.actor?.name ?? "Someone"}
                         </span>{" "}
                         {item.title}
                       </p>
-                      <span className="shrink-0 text-[12px] text-[#94A3B8]">
+                      <span className="shrink-0 text-[12px] text-subtle-foreground">
                         {formatRelativeTime(item.createdAt)}
                       </span>
                     </div>

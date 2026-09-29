@@ -69,7 +69,7 @@ export default function WorkloadPage() {
                   </div>
                   <Meter value={percent} danger={user.overloaded} />
                   {user.warning ? (
-                    <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+                    <div className="mt-3 rounded-lg border border-warning/30 bg-warning-soft px-3 py-2 text-sm text-warning-soft-foreground">
                       <p className="font-medium">{user.warning.title}</p>
                       <p className="mt-0.5">{user.warning.message}</p>
                     </div>

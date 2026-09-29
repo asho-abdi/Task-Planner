@@ -35,7 +35,7 @@ export function WorkspaceSwitcher({ collapsed }: { collapsed?: boolean }) {
   const menu = (
     <div
       className={cn(
-        "absolute z-30 overflow-hidden rounded-xl border border-white/10 bg-[#111827] py-1 shadow-[0_16px_40px_rgba(0,0,0,0.35)]",
+        "absolute z-30 overflow-hidden rounded-xl border border-white/10 bg-foreground py-1 shadow-[0_16px_40px_rgba(0,0,0,0.35)]",
         collapsed ? "left-full top-0 ml-2 w-56" : "mt-1.5 w-full",
       )}
     >
@@ -44,8 +44,8 @@ export function WorkspaceSwitcher({ collapsed }: { collapsed?: boolean }) {
           key={workspace.id}
           type="button"
           className={cn(
-            "flex w-full items-center gap-2.5 px-3 py-2 text-left text-[14px] font-semibold text-white transition-colors hover:bg-white/[0.08]",
-            workspace.id === currentWorkspaceId && "bg-white/[0.06]",
+            "flex w-full items-center gap-2.5 px-3 py-2 text-left text-[14px] font-semibold text-white transition-colors hover:bg-card/[0.08]",
+            workspace.id === currentWorkspaceId && "bg-card/[0.06]",
           )}
           onClick={() => {
             setCurrentWorkspaceId(workspace.id);
@@ -61,7 +61,7 @@ export function WorkspaceSwitcher({ collapsed }: { collapsed?: boolean }) {
       ))}
       <button
         type="button"
-        className="flex w-full items-center gap-2.5 border-t border-white/10 px-3 py-2 text-left text-[14px] font-semibold text-[#94A3B8] transition-colors hover:bg-white/[0.06] hover:text-white"
+        className="flex w-full items-center gap-2.5 border-t border-white/10 px-3 py-2 text-left text-[14px] font-semibold text-subtle-foreground transition-colors hover:bg-card/[0.06] hover:text-white"
         onClick={() => {
           setOpen(false);
           setOpenCreateDialog("workspace");
@@ -79,7 +79,7 @@ export function WorkspaceSwitcher({ collapsed }: { collapsed?: boolean }) {
         <button
           type="button"
           title={current?.name ?? "Workspace"}
-          className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-white/[0.06]"
+          className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-md bg-card/[0.06]"
           onClick={() => setOpen((value) => !value)}
         >
           <WorkspaceMark name={current?.name} logo={current?.logo} />
@@ -94,7 +94,7 @@ export function WorkspaceSwitcher({ collapsed }: { collapsed?: boolean }) {
       <button
         type="button"
         aria-label="Workspace"
-        className="flex h-8 w-full items-center justify-between rounded-md px-2 text-left text-[14px] font-bold leading-[1.3] text-white outline-none hover:bg-white/[0.06] focus-visible:bg-white/[0.06]"
+        className="flex h-8 w-full items-center justify-between rounded-md px-2 text-left text-[14px] font-bold leading-[1.3] text-white outline-none hover:bg-card/[0.06] focus-visible:bg-card/[0.06]"
         onClick={() => setOpen((value) => !value)}
       >
         <span className="flex min-w-0 items-center gap-2">
@@ -103,7 +103,7 @@ export function WorkspaceSwitcher({ collapsed }: { collapsed?: boolean }) {
             {current?.name ?? "Select workspace"}
           </span>
         </span>
-        <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-[#64748B]" />
+        <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
       </button>
       {open ? menu : null}
     </div>

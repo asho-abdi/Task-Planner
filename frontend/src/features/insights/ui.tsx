@@ -121,16 +121,16 @@ export function KpiCard({
   change?: { percent: number; up: boolean } | null;
 }) {
   return (
-    <div className="rounded-[12px] border border-[#E5E7EB] bg-white p-4">
+    <div className="rounded-[12px] border border-border bg-card p-4">
       <div className="flex items-start justify-between gap-3">
-        <p className="text-[12px] font-medium text-[#64748B]">{label}</p>
+        <p className="text-[12px] font-medium text-muted-foreground">{label}</p>
         {icon ? (
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F8FAFC] text-primary">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-primary">
             {icon}
           </span>
         ) : null}
       </div>
-      <p className="font-heading mt-2 text-[26px] font-extrabold leading-[1.15] tracking-[-0.03em] text-[#172033]">
+      <p className="font-heading mt-2 text-[26px] font-extrabold leading-[1.15] tracking-[-0.03em] text-foreground">
         {value}
       </p>
       <div className="mt-1 flex items-center gap-2">
@@ -138,14 +138,14 @@ export function KpiCard({
           <span
             className={cn(
               "text-[12px] font-medium",
-              change.up ? "text-[#16A34A]" : "text-[#EF4444]",
+              change.up ? "text-success" : "text-danger",
             )}
           >
             {change.up ? "↑" : "↓"} {change.percent}%
           </span>
         ) : null}
         {hint ? (
-          <span className="text-[12px] text-[#94A3B8]">{hint}</span>
+          <span className="text-[12px] text-subtle-foreground">{hint}</span>
         ) : null}
       </div>
     </div>
@@ -171,7 +171,7 @@ export function DonutChart({
           cy="70"
           r={r}
           fill="none"
-          stroke="#EEF2F6"
+          style={{ stroke: "var(--muted)" }}
           strokeWidth="16"
         />
         {visible.map((slice) => {
@@ -183,7 +183,7 @@ export function DonutChart({
               cy="70"
               r={r}
               fill="none"
-              stroke={slice.color}
+              style={{ stroke: slice.color }}
               strokeWidth="16"
               strokeDasharray={`${len} ${c - len}`}
               strokeDashoffset={-offset}
@@ -194,10 +194,10 @@ export function DonutChart({
         })}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <p className="text-[22px] font-semibold tracking-tight text-[#172033]">
+        <p className="text-[22px] font-semibold tracking-tight text-foreground">
           {total}
         </p>
-        <p className="text-[11px] text-[#94A3B8]">tasks</p>
+        <p className="text-[11px] text-subtle-foreground">tasks</p>
       </div>
     </div>
   );
@@ -241,17 +241,17 @@ export function TrendChart({
           x2={width - pad.r}
           y1={y(max * tick)}
           y2={y(max * tick)}
-          stroke="#E5E7EB"
+          style={{ stroke: "var(--border)" }}
           strokeDasharray="4 6"
         />
       ))}
       {series.map((item) => (
         <g key={item.label}>
-          <path d={area(item.values)} fill={item.color} opacity="0.08" />
+          <path d={area(item.values)} style={{ fill: item.color }} opacity="0.08" />
           <path
             d={path(item.values)}
             fill="none"
-            stroke={item.color}
+            style={{ stroke: item.color }}
             strokeWidth="2.5"
             strokeLinecap="round"
           />
@@ -266,7 +266,7 @@ export function TrendChart({
             x={x(index)}
             y={height - 8}
             textAnchor="middle"
-            className="fill-[#94A3B8] text-[11px]"
+            className="fill-subtle-foreground text-[11px]"
           >
             {label}
           </text>

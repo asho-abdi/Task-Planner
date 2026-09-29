@@ -59,7 +59,7 @@ export default function MeetingsPage() {
           }
         />
       ) : (
-        <ListPanel className="divide-y divide-[#E5E7EB]">
+        <ListPanel className="divide-y divide-border">
           {items.map((meeting) => (
             <MeetingCard
               key={`${meeting.id}-${meeting.startAt}`}
@@ -68,7 +68,7 @@ export default function MeetingsPage() {
           ))}
         </ListPanel>
       )}
-      <p className="text-[14px] font-medium text-[#64748B]">
+      <p className="text-[14px] font-medium text-muted-foreground">
         See everything together on the{" "}
         <Link href="/app/calendar" className="font-semibold text-primary hover:underline">
           calendar

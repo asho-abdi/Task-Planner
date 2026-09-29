@@ -74,19 +74,19 @@ function TaskMenu({ task }: { task: InsightTask }) {
         aria-expanded={open}
         aria-haspopup="menu"
         onClick={() => setOpen((value) => !value)}
-        className="flex h-7 w-7 items-center justify-center rounded-md text-[#94A3B8] opacity-0 transition-opacity hover:bg-[#F8FAFC] hover:text-[#172033] group-hover:opacity-100 focus-visible:opacity-100"
+        className="flex h-7 w-7 items-center justify-center rounded-md text-subtle-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100"
       >
         <MoreHorizontal className="h-4 w-4" />
       </button>
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 z-20 mt-1 w-40 overflow-hidden rounded-lg border border-[#E5E7EB] bg-white py-1 shadow-[0_8px_24px_rgba(15,23,42,0.08)]"
+          className="absolute right-0 z-20 mt-1 w-40 overflow-hidden rounded-lg border border-border bg-card py-1 shadow-[0_8px_24px_rgba(15,23,42,0.08)]"
         >
           <Link
             role="menuitem"
             href={`/app/tasks/${task.id}`}
-            className="block px-3 py-1.5 text-[13px] text-[#172033] hover:bg-[#F8FAFC]"
+            className="block px-3 py-1.5 text-[13px] text-foreground hover:bg-muted"
             onClick={() => setOpen(false)}
           >
             Open task
@@ -95,7 +95,7 @@ function TaskMenu({ task }: { task: InsightTask }) {
             <button
               type="button"
               role="menuitem"
-              className="block w-full px-3 py-1.5 text-left text-[13px] text-[#172033] hover:bg-[#F8FAFC]"
+              className="block w-full px-3 py-1.5 text-left text-[13px] text-foreground hover:bg-muted"
               disabled={start.isPending}
               onClick={() => {
                 setOpen(false);
@@ -109,7 +109,7 @@ function TaskMenu({ task }: { task: InsightTask }) {
             <Link
               role="menuitem"
               href={`/app/projects/${task.project.id}`}
-              className="block px-3 py-1.5 text-[13px] text-[#172033] hover:bg-[#F8FAFC]"
+              className="block px-3 py-1.5 text-[13px] text-foreground hover:bg-muted"
               onClick={() => setOpen(false)}
             >
               View project
@@ -130,7 +130,7 @@ function TaskStatusControl({ task }: { task: InsightTask }) {
     done
       ? "border-primary bg-primary text-white"
       : startable
-        ? "border-[#CBD5E1] bg-white hover:border-primary"
+        ? "border-border-strong bg-card hover:border-primary"
         : "border-primary bg-primary/10",
   );
 
@@ -184,7 +184,7 @@ function TaskRow({
     <div
       className={cn(
         "group flex items-center gap-3 px-4 py-2.5",
-        tone === "overdue" && "bg-[#FEF2F2]/60",
+        tone === "overdue" && "bg-danger-soft/60",
         tone === "completed" && "opacity-55",
       )}
     >
@@ -194,16 +194,16 @@ function TaskRow({
           <Link
             href={`/app/tasks/${task.id}`}
             className={cn(
-              "truncate text-[13px] font-medium text-[#172033] hover:text-primary",
-              tone === "completed" && "text-[#64748B] line-through",
+              "truncate text-[13px] font-medium text-foreground hover:text-primary",
+              tone === "completed" && "text-muted-foreground line-through",
             )}
           >
             {task.title}
           </Link>
         </div>
-        <p className="mt-0.5 truncate text-[12px] text-[#64748B]">
+        <p className="mt-0.5 truncate text-[12px] text-muted-foreground">
           {tone === "overdue" ? (
-            <span className="text-[#EF4444]">
+            <span className="text-danger">
               Overdue
               {task.dueDate ? ` · ${formatDate(task.dueDate)}` : ""}
             </span>
@@ -215,7 +215,7 @@ function TaskRow({
       </div>
       <div className="hidden shrink-0 items-center gap-3 sm:flex">
         {tone !== "overdue" && time ? (
-          <span className="text-[12px] tabular-nums text-[#64748B]">{time}</span>
+          <span className="text-[12px] tabular-nums text-muted-foreground">{time}</span>
         ) : null}
         {people.length ? <MemberAvatarGroup people={people} limit={2} /> : null}
       </div>
@@ -243,15 +243,15 @@ function TaskSection({
       {collapsible ? (
         <ChevronDown
           className={cn(
-            "h-3.5 w-3.5 text-[#94A3B8] transition-transform",
+            "h-3.5 w-3.5 text-subtle-foreground transition-transform",
             !open && "-rotate-90",
           )}
         />
       ) : null}
-      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#94A3B8]">
+      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-subtle-foreground">
         {title}
       </span>
-      <span className="text-[11px] tabular-nums text-[#CBD5E1]">{count}</span>
+      <span className="text-[11px] tabular-nums text-border-strong">{count}</span>
     </div>
   );
 
@@ -268,7 +268,7 @@ function TaskSection({
       ) : (
         heading
       )}
-      {open ? <div className="divide-y divide-[#F1F5F9]">{children}</div> : null}
+      {open ? <div className="divide-y divide-muted">{children}</div> : null}
     </div>
   );
 }
@@ -286,23 +286,23 @@ function MeetingRow({
   return (
     <div className="relative flex gap-3 pb-5 last:pb-0">
       {!last ? (
-        <span className="absolute left-[3px] top-4 h-[calc(100%-8px)] w-px bg-[#E5E7EB]" />
+        <span className="absolute left-[3px] top-4 h-[calc(100%-8px)] w-px bg-border" />
       ) : null}
       <span className="relative mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-[12px] font-medium tabular-nums text-[#64748B]">
+            <p className="text-[12px] font-medium tabular-nums text-muted-foreground">
               {formatTime(meeting.startAt)}
               {meeting.endAt ? ` – ${formatTime(meeting.endAt)}` : ""}
             </p>
             <Link
               href={`/app/meetings/${meeting.id}`}
-              className="mt-0.5 block truncate text-[13px] font-medium text-[#172033] hover:text-primary"
+              className="mt-0.5 block truncate text-[13px] font-medium text-foreground hover:text-primary"
             >
               {meeting.title}
             </Link>
-            <p className="mt-0.5 truncate text-[12px] text-[#64748B]">
+            <p className="mt-0.5 truncate text-[12px] text-muted-foreground">
               {context ? `${context} · ` : ""}
               {meetingPlace(meeting)}
             </p>
@@ -319,7 +319,7 @@ function MeetingRow({
           ) : (
             <Link
               href={`/app/meetings/${meeting.id}`}
-              className="shrink-0 pt-0.5 text-[12px] font-medium text-[#64748B] hover:text-primary"
+              className="shrink-0 pt-0.5 text-[12px] font-medium text-muted-foreground hover:text-primary"
             >
               View
             </Link>
@@ -359,38 +359,38 @@ export default function MyDayPage() {
     <PageShell className="max-w-[1080px] space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 items-center gap-4">
-          <div className="flex h-[72px] w-[64px] shrink-0 flex-col items-center justify-center rounded-[12px] border border-[#E5E7EB] bg-white">
+          <div className="flex h-[72px] w-[64px] shrink-0 flex-col items-center justify-center rounded-[12px] border border-border bg-card">
             <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">
               {now.toLocaleDateString(undefined, { month: "short" })}
             </span>
-            <span className="text-[28px] font-semibold leading-none tracking-[-0.04em] text-[#172033]">
+            <span className="text-[28px] font-semibold leading-none tracking-[-0.04em] text-foreground">
               {now.getDate()}
             </span>
           </div>
           <div className="min-w-0">
-            <p className="text-[12px] font-medium text-[#64748B]">
+            <p className="text-[12px] font-medium text-muted-foreground">
               {now.toLocaleDateString(undefined, {
                 weekday: "long",
                 year: "numeric",
               })}
             </p>
-            <h1 className="font-heading mt-0.5 truncate text-[26px] font-extrabold leading-[1.2] tracking-[-0.03em] text-[#172033] sm:text-[30px]">
+            <h1 className="font-heading mt-0.5 truncate text-[26px] font-extrabold leading-[1.2] tracking-[-0.03em] text-foreground sm:text-[30px]">
               {greeting(firstName)}
             </h1>
-            <p className="mt-1 text-[15px] font-normal leading-[1.5] text-[#64748B]">
-              <span className="tabular-nums text-[#172033]">{openCount}</span>{" "}
+            <p className="mt-1 text-[15px] font-normal leading-[1.5] text-muted-foreground">
+              <span className="tabular-nums text-foreground">{openCount}</span>{" "}
               open
               {groups.overdue.length ? (
                 <>
                   {" · "}
-                  <span className="tabular-nums text-[#EF4444]">
+                  <span className="tabular-nums text-danger">
                     {groups.overdue.length}
                   </span>{" "}
                   overdue
                 </>
               ) : null}
               {" · "}
-              <span className="tabular-nums text-[#172033]">
+              <span className="tabular-nums text-foreground">
                 {meetings.length}
               </span>{" "}
               {meetings.length === 1 ? "meeting" : "meetings"}
@@ -424,7 +424,7 @@ export default function MyDayPage() {
         <EmptyState title="Unable to load My Day" />
       ) : (
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-          <section className="overflow-hidden rounded-[12px] border border-[#E5E7EB] bg-white">
+          <section className="overflow-hidden rounded-[12px] border border-border bg-card">
             {!hasWork ? (
               <div className="px-4">
                 <EmptyState
@@ -439,7 +439,7 @@ export default function MyDayPage() {
                 />
               </div>
             ) : (
-              <div className="divide-y divide-[#E5E7EB]">
+              <div className="divide-y divide-border">
                 <TaskSection title="Overdue" count={groups.overdue.length}>
                   {groups.overdue.map((task) => (
                     <TaskRow key={task.id} task={task} tone="overdue" />
@@ -463,17 +463,17 @@ export default function MyDayPage() {
             )}
           </section>
 
-          <aside className="rounded-[12px] border border-[#E5E7EB] bg-white p-4">
+          <aside className="rounded-[12px] border border-border bg-card p-4">
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-[13px] font-semibold text-[#172033]">
+              <h2 className="text-[13px] font-semibold text-foreground">
                 Schedule
               </h2>
-              <span className="text-[12px] tabular-nums text-[#94A3B8]">
+              <span className="text-[12px] tabular-nums text-subtle-foreground">
                 {meetings.length}
               </span>
             </div>
             {meetings.length === 0 ? (
-              <p className="mt-6 text-[13px] leading-5 text-[#64748B]">
+              <p className="mt-6 text-[13px] leading-5 text-muted-foreground">
                 No meetings on the calendar.
               </p>
             ) : (

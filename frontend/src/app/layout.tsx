@@ -1,9 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Providers } from "@/app/providers";
-import "@fontsource-variable/inter/wght.css";
-import "@fontsource/poppins/latin-600.css";
-import "@fontsource/poppins/latin-700.css";
-import "@fontsource/poppins/latin-800.css";
+import { themeInitScript } from "@/lib/theme";
+import "@fontsource-variable/geist/wght.css";
+import "@fontsource-variable/geist-mono/wght.css";
+import "@fontsource-variable/bricolage-grotesque/wght.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -11,9 +11,19 @@ export const metadata: Metadata = {
   description: "Plan and track work across teams and workspaces",
 };
 
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fbfbfd" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f1015" },
+  ],
+};
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className="h-full antialiased" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body
         className="min-h-full bg-background font-sans text-foreground"
         suppressHydrationWarning

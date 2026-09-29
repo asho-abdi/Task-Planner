@@ -155,7 +155,7 @@ function CreateTaskForm({
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
       {createdCount > 0 ? (
-        <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+        <p className="rounded-xl bg-success-soft px-3 py-2 text-sm text-success-soft-foreground">
           {createdCount} task{createdCount === 1 ? "" : "s"} added to this
           project. Add another with different people, or done.
         </p>

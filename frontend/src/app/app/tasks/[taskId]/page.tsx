@@ -56,7 +56,7 @@ import {
 import { useWorkspaceStore } from "@/store/workspace-store";
 
 const workspaceCard =
-  "rounded-2xl border-[#E5E7EB] shadow-[0_1px_2px_rgba(15,23,42,0.04)]";
+  "rounded-2xl border-border shadow-[0_1px_2px_rgba(15,23,42,0.04)]";
 
 export default function TaskDetailPage() {
   const params = useParams<{ taskId: string }>();
@@ -214,7 +214,7 @@ function TaskDetail({
       <div className="space-y-6">
         <Link
           href="/app/tasks"
-          className="inline-flex items-center gap-1.5 text-sm text-[#64748B] transition-colors hover:text-primary"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-primary"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           Back to Tasks
@@ -222,18 +222,18 @@ function TaskDetail({
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <p className="text-[11px] font-extrabold uppercase tracking-[0.10em] text-[#64748B]">
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.10em] text-muted-foreground">
               Task
             </p>
             <div className="mt-1.5 flex items-start gap-2.5">
-              <span className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-primary">
+              <span className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
                 <CheckSquare className="h-4 w-4" />
               </span>
-              <h1 className="font-heading text-[26px] font-extrabold leading-[1.2] tracking-[-0.03em] text-[#172033] sm:text-[30px]">
+              <h1 className="font-heading text-[26px] font-extrabold leading-[1.2] tracking-[-0.03em] text-foreground sm:text-[30px]">
                 {task.title}
               </h1>
             </div>
-            <p className="mt-2 text-sm text-[#64748B]">
+            <p className="mt-2 text-sm text-muted-foreground">
               {task.project ? (
                 <Link
                   href={`/app/projects/${task.project.id}`}
@@ -259,7 +259,7 @@ function TaskDetail({
               ) : null}
             </p>
             {task.blocked && (task.blockedBy ?? task.dependsOn)[0] ? (
-              <p className="mt-2 text-sm text-amber-800">
+              <p className="mt-2 text-sm text-warning-soft-foreground">
                 🔒 Blocked by “{(task.blockedBy ?? task.dependsOn)[0].title}”
               </p>
             ) : null}
@@ -287,15 +287,15 @@ function TaskDetail({
             </CardHeader>
             <CardContent>
               {task.description ? (
-                <p className="text-sm leading-6 text-[#172033]">
+                <p className="text-sm leading-6 text-foreground">
                   {task.description}
                 </p>
               ) : (
-                <div className="rounded-xl border border-dashed border-[#E5E7EB] px-4 py-6 text-center">
-                  <p className="text-sm font-medium text-[#172033]">
+                <div className="rounded-xl border border-dashed border-border px-4 py-6 text-center">
+                  <p className="text-sm font-medium text-foreground">
                     No description
                   </p>
-                  <p className="mt-1 text-sm text-[#64748B]">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     Add context from Task Details on the right.
                   </p>
                 </div>
@@ -320,7 +320,7 @@ function TaskDetail({
                     <li key={file.id}>
                       <button
                         type="button"
-                        className="flex w-full items-center justify-between rounded-xl border border-[#E5E7EB] px-3.5 py-2.5 text-left text-sm transition-colors hover:bg-slate-50"
+                        className="flex w-full items-center justify-between rounded-xl border border-border px-3.5 py-2.5 text-left text-sm transition-colors hover:bg-muted"
                         onClick={() =>
                           void downloadFile(file.id, file.originalName)
                         }
@@ -328,7 +328,7 @@ function TaskDetail({
                         <span className="truncate font-medium">
                           {file.originalName}
                         </span>
-                        <span className="text-xs text-[#64748B]">
+                        <span className="text-xs text-muted-foreground">
                           {Math.round(file.sizeBytes / 1024)} KB
                         </span>
                       </button>
@@ -336,11 +336,11 @@ function TaskDetail({
                   ))}
                 </ul>
               ) : (
-                <div className="rounded-xl border border-dashed border-[#E5E7EB] px-4 py-6 text-center">
-                  <p className="text-sm font-medium text-[#172033]">
+                <div className="rounded-xl border border-dashed border-border px-4 py-6 text-center">
+                  <p className="text-sm font-medium text-foreground">
                     No reference files
                   </p>
-                  <p className="mt-1 text-sm text-[#64748B]">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     No files have been attached to this task.
                   </p>
                 </div>
@@ -434,7 +434,7 @@ function TaskDetail({
                 value={
                   <div>
                     <StatusBadge value={task.status} />
-                    <p className="mt-1 text-xs text-[#64748B]">
+                    <p className="mt-1 text-xs text-muted-foreground">
                       Updates from start, submit, and review
                     </p>
                   </div>
@@ -852,12 +852,12 @@ function MetaRow({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[#94A3B8]" />
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-subtle-foreground" />
       <div className="min-w-0">
-        <p className="text-[12px] font-medium uppercase tracking-wide text-[#64748B]">
+        <p className="text-[12px] font-medium uppercase tracking-wide text-muted-foreground">
           {label}
         </p>
-        <div className="mt-1 font-medium text-[#172033]">{value}</div>
+        <div className="mt-1 font-medium text-foreground">{value}</div>
       </div>
     </div>
   );

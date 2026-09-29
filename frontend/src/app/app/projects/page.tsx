@@ -148,7 +148,7 @@ export default function ProjectsPage() {
 
       <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
         <div className="relative min-w-0 lg:max-w-xs lg:flex-1">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#94A3B8]" />
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-subtle-foreground" />
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -203,7 +203,7 @@ export default function ProjectsPage() {
         {hasFilters ? (
           <button
             type="button"
-            className="text-[12px] font-medium text-[#64748B] hover:text-[#172033] lg:ml-auto"
+            className="text-[12px] font-medium text-muted-foreground hover:text-foreground lg:ml-auto"
             onClick={() => {
               setQuery("");
               setStatus("");
@@ -253,12 +253,12 @@ export default function ProjectsPage() {
         />
       ) : (
         <>
-          <ListPanel className="divide-y divide-[#E5E7EB]">
+          <ListPanel className="divide-y divide-border">
             {filtered.map((project) => (
               <ProjectCard key={project.id} project={project} />
             ))}
           </ListPanel>
-          <p className="text-[12px] text-[#64748B]">
+          <p className="text-[12px] text-muted-foreground">
             {filtered.length}
             {filtered.length !== total ? ` of ${total}` : ""}{" "}
             {filtered.length === 1 ? "project" : "projects"}

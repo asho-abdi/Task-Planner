@@ -23,12 +23,12 @@ import { useWorkspaceStore } from "@/store/workspace-store";
 import type { DashboardTask, InsightTask } from "@/features/insights/types";
 
 const STATUS_TONES: Record<string, string> = {
-  COMPLETED: "#16A34A",
-  IN_PROGRESS: "#635BFF",
-  OVERDUE: "#EF4444",
-  TODO: "#94A3B8",
-  IN_REVIEW: "#F59E0B",
-  RETURNED: "#EF4444",
+  COMPLETED: "var(--success)",
+  IN_PROGRESS: "var(--chart-1)",
+  OVERDUE: "var(--danger)",
+  TODO: "var(--chart-6)",
+  IN_REVIEW: "var(--chart-3)",
+  RETURNED: "var(--danger)",
 };
 
 function firstNameOf(name?: string | null) {
@@ -100,13 +100,13 @@ export function DashboardHome() {
       .map(([status, count]) => ({
         label: status.replaceAll("_", " ").toLowerCase(),
         count,
-        color: STATUS_TONES[status] ?? "#94A3B8",
+        color: STATUS_TONES[status] ?? "var(--chart-6)",
       }));
     if (rows.length) return rows;
     return [
-      { label: "open", count: myTasks, color: "#635BFF" },
-      { label: "completed", count: completed, color: "#16A34A" },
-      { label: "overdue", count: overdue, color: "#EF4444" },
+      { label: "open", count: myTasks, color: "var(--chart-1)" },
+      { label: "completed", count: completed, color: "var(--success)" },
+      { label: "overdue", count: overdue, color: "var(--danger)" },
     ].filter((item) => item.count > 0);
   }, [reports.data?.completion.byStatus, myTasks, completed, overdue]);
 
@@ -114,7 +114,7 @@ export function DashboardHome() {
     <div className="space-y-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-heading text-[26px] font-extrabold leading-[1.2] tracking-[-0.03em] text-[#172033] sm:text-[30px]">
+          <h1 className="font-heading text-[26px] font-extrabold leading-[1.2] tracking-[-0.03em] text-foreground sm:text-[30px]">
             Dashboard
           </h1>
           <label className="sr-only" htmlFor="dashboard-range">
@@ -124,7 +124,7 @@ export function DashboardHome() {
             id="dashboard-range"
             value={range}
             onChange={(event) => setRange(event.target.value as "7" | "14")}
-            className="h-9 rounded-xl border border-[#E5E7EB] bg-white px-3 text-[14px] font-medium text-[#172033] shadow-[var(--shadow-soft)]"
+            className="h-9 rounded-xl border border-border bg-card px-3 text-[14px] font-medium text-foreground shadow-[var(--shadow-soft)]"
           >
             <option value="7">This week</option>
             <option value="14">Last 14 days</option>
@@ -145,7 +145,7 @@ export function DashboardHome() {
           </div>
         ) : null}
       </header>
-      <p className="text-sm text-[#64748B]">
+      <p className="text-sm text-muted-foreground">
         Welcome back, {firstName}.
       </p>
 
@@ -200,17 +200,17 @@ export function DashboardHome() {
           )}
         </div>
 
-        <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-[var(--shadow-soft)] xl:col-span-7">
+        <section className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-soft)] xl:col-span-7">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="text-[15px] font-bold text-[#172033]">Activity</h2>
-              <p className="text-xs text-[#64748B]">
+              <h2 className="text-[15px] font-bold text-foreground">Activity</h2>
+              <p className="text-xs text-muted-foreground">
                 Tasks created and completed
               </p>
             </div>
             <div className="flex gap-5 text-sm">
-              <Legend swatch="#635BFF" label={`${weekCreated} created`} />
-              <Legend swatch="#16A34A" label={`${weekCompleted} completed`} />
+              <Legend swatch="var(--chart-1)" label={`${weekCreated} created`} />
+              <Legend swatch="var(--success)" label={`${weekCompleted} completed`} />
             </div>
           </div>
           {reports.isLoading ? (
@@ -220,7 +220,7 @@ export function DashboardHome() {
               {reports.error.message}
             </p>
           ) : !(reports.data?.trends.length ?? 0) ? (
-            <p className="mt-16 text-center text-sm text-[#64748B]">
+            <p className="mt-16 text-center text-sm text-muted-foreground">
               No activity in this range yet.
             </p>
           ) : (
@@ -236,9 +236,9 @@ export function DashboardHome() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-12">
-        <section className="rounded-2xl border border-[#E5E7EB] bg-white shadow-[var(--shadow-soft)] xl:col-span-8">
-          <div className="flex items-center justify-between gap-3 border-b border-[#E5E7EB] px-5 py-4">
-            <h2 className="text-[15px] font-bold text-[#172033]">
+        <section className="rounded-2xl border border-border bg-card shadow-[var(--shadow-soft)] xl:col-span-8">
+          <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
+            <h2 className="text-[15px] font-bold text-foreground">
               Today&apos;s tasks
             </h2>
             <Button asChild size="sm" variant="outline">
@@ -252,14 +252,14 @@ export function DashboardHome() {
               <Skeleton className="h-10" />
             </div>
           ) : todayTasks.length === 0 ? (
-            <p className="px-5 py-10 text-sm text-[#64748B]">
+            <p className="px-5 py-10 text-sm text-muted-foreground">
               No tasks assigned yet
             </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[640px] text-left text-[14px] font-medium">
-                <thead className="text-[12px] font-semibold uppercase tracking-wide text-[#94A3B8]">
-                  <tr className="border-b border-[#E5E7EB]">
+                <thead className="text-[12px] font-semibold uppercase tracking-wide text-subtle-foreground">
+                  <tr className="border-b border-border">
                     <th className="px-5 py-3 font-medium">Task</th>
                     <th className="px-3 py-3 font-medium">Project</th>
                     <th className="px-3 py-3 font-medium">Priority</th>
@@ -281,13 +281,13 @@ export function DashboardHome() {
           )}
         </section>
 
-        <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-[var(--shadow-soft)] xl:col-span-4">
-          <h2 className="text-[15px] font-bold text-[#172033]">Work mix</h2>
-          <p className="text-xs text-[#64748B]">By status in this range</p>
+        <section className="rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-soft)] xl:col-span-4">
+          <h2 className="text-[15px] font-bold text-foreground">Work mix</h2>
+          <p className="text-xs text-muted-foreground">By status in this range</p>
           {reports.isLoading && dashboard.isLoading ? (
             <Skeleton className="mx-auto mt-8 h-44 w-44 rounded-full" />
           ) : donut.length === 0 ? (
-            <p className="mt-16 text-center text-sm text-[#64748B]">
+            <p className="mt-16 text-center text-sm text-muted-foreground">
               No work to chart yet.
             </p>
           ) : (
@@ -302,14 +302,14 @@ export function DashboardHome() {
                     key={item.label}
                     className="flex items-center justify-between text-sm"
                   >
-                    <span className="flex items-center gap-2 capitalize text-[#64748B]">
+                    <span className="flex items-center gap-2 capitalize text-muted-foreground">
                       <span
                         className="h-2 w-2 rounded-full"
                         style={{ background: item.color }}
                       />
                       {item.label}
                     </span>
-                    <span className="font-medium text-[#172033]">
+                    <span className="font-medium text-foreground">
                       {item.count}
                     </span>
                   </li>
@@ -343,16 +343,16 @@ function StatCard({
   return (
     <Link
       href={href}
-      className="rounded-2xl border border-[#E5E7EB] bg-white p-4 shadow-[var(--shadow-soft)] transition-colors hover:border-primary/30"
+      className="rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-soft)] transition-colors hover:border-primary/30"
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="text-sm text-[#64748B]">{label}</p>
+        <p className="text-sm text-muted-foreground">{label}</p>
         <span
           className={cn(
             "flex h-8 w-8 items-center justify-center rounded-xl",
-            tone === "success" && "bg-emerald-50 text-[#16A34A]",
-            tone === "danger" && "bg-red-50 text-[#EF4444]",
-            !tone && "bg-[#EEF2FF] text-primary",
+            tone === "success" && "bg-success-soft text-success",
+            tone === "danger" && "bg-danger-soft text-danger",
+            !tone && "bg-primary-soft text-primary",
           )}
         >
           <Icon className="h-4 w-4" />
@@ -360,8 +360,8 @@ function StatCard({
       </div>
       <p
         className={cn(
-          "mt-3 text-[28px] font-semibold tracking-tight text-[#172033]",
-          tone === "danger" && value > 0 && "text-[#EF4444]",
+          "mt-3 text-[28px] font-semibold tracking-tight text-foreground",
+          tone === "danger" && value > 0 && "text-danger",
         )}
       >
         {value.toLocaleString()}
@@ -371,7 +371,7 @@ function StatCard({
           <span
             className={cn(
               "inline-flex items-center font-medium",
-              change.up ? "text-[#16A34A]" : "text-[#EF4444]",
+              change.up ? "text-success" : "text-danger",
             )}
           >
             {change.up ? (
@@ -382,7 +382,7 @@ function StatCard({
             {change.percent}%
           </span>
         ) : null}
-        <span className="text-[#64748B]">{hint}</span>
+        <span className="text-muted-foreground">{hint}</span>
       </div>
     </Link>
   );
@@ -390,7 +390,7 @@ function StatCard({
 
 function Legend({ swatch, label }: { swatch: string; label: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-[#64748B]">
+    <span className="inline-flex items-center gap-1.5 text-muted-foreground">
       <span
         className="h-2 w-2 rounded-full"
         style={{ background: swatch }}
@@ -411,7 +411,7 @@ function TaskRow({
   const canStart = canWrite && canStartTask(task.status);
 
   return (
-    <tr className="border-b border-[#E5E7EB] last:border-0">
+    <tr className="border-b border-border last:border-0">
       <td className="px-5 py-3.5">
         <div className="flex items-center gap-2.5">
           <button
@@ -424,25 +424,25 @@ function TaskRow({
             className={cn(
               "h-4 w-4 shrink-0 rounded border",
               canStart
-                ? "border-[#CBD5E1] bg-white hover:border-primary"
+                ? "border-border-strong bg-card hover:border-primary"
                 : "border-primary bg-primary/10",
             )}
           />
           <Link
             href={`/app/tasks/${task.id}`}
-            className="font-medium text-[#172033] hover:text-primary"
+            className="font-medium text-foreground hover:text-primary"
           >
             {task.title}
           </Link>
         </div>
       </td>
-      <td className="px-3 py-3.5 text-[#64748B]">
+      <td className="px-3 py-3.5 text-muted-foreground">
         {task.project?.name ?? "—"}
       </td>
       <td className="px-3 py-3.5">
         <StatusBadge value={task.priority} />
       </td>
-      <td className="px-3 py-3.5 text-[#64748B]">
+      <td className="px-3 py-3.5 text-muted-foreground">
         {task.dueDate ? formatDate(task.dueDate) : "—"}
       </td>
       <td className="px-5 py-3.5">
@@ -484,19 +484,19 @@ function TrendChart({
           x2={width - pad.r}
           y1={y(max * tick)}
           y2={y(max * tick)}
-          stroke="#E5E7EB"
+          style={{ stroke: "var(--border)" }}
           strokeDasharray="4 6"
         />
       ))}
-      <path d={path(created)} fill="none" stroke="#635BFF" strokeWidth="2.5" strokeLinecap="round" />
-      <path d={path(completed)} fill="none" stroke="#16A34A" strokeWidth="2.5" strokeLinecap="round" />
+      <path d={path(created)} fill="none" style={{ stroke: "var(--chart-1)" }} strokeWidth="2.5" strokeLinecap="round" />
+      <path d={path(completed)} fill="none" style={{ stroke: "var(--success)" }} strokeWidth="2.5" strokeLinecap="round" />
       {created.map((value, index) => (
-        <circle key={`c-${index}`} cx={x(index)} cy={y(value)} r="3" fill="#635BFF">
+        <circle key={`c-${index}`} cx={x(index)} cy={y(value)} r="3" style={{ fill: "var(--chart-1)" }}>
           <title>{`${labels[index]} · ${value} created`}</title>
         </circle>
       ))}
       {completed.map((value, index) => (
-        <circle key={`d-${index}`} cx={x(index)} cy={y(value)} r="3" fill="#16A34A">
+        <circle key={`d-${index}`} cx={x(index)} cy={y(value)} r="3" style={{ fill: "var(--success)" }}>
           <title>{`${labels[index]} · ${value} completed`}</title>
         </circle>
       ))}
@@ -506,7 +506,7 @@ function TrendChart({
           x={x(index)}
           y={height - 8}
           textAnchor="middle"
-          className="fill-[#94A3B8] text-[11px]"
+          className="fill-subtle-foreground text-[11px]"
         >
           {label}
         </text>
@@ -533,7 +533,7 @@ function Donut({
           cy="70"
           r={r}
           fill="none"
-          stroke="#EEF2F6"
+          style={{ stroke: "var(--muted)" }}
           strokeWidth="16"
         />
         {slices.map((slice) => {
@@ -545,7 +545,7 @@ function Donut({
               cy="70"
               r={r}
               fill="none"
-              stroke={slice.color}
+              style={{ stroke: slice.color }}
               strokeWidth="16"
               strokeDasharray={`${len} ${c - len}`}
               strokeDashoffset={-offset}
@@ -557,8 +557,8 @@ function Donut({
         })}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <p className="text-xs text-[#64748B]">Total</p>
-        <p className="text-xl font-semibold text-[#172033]">
+        <p className="text-xs text-muted-foreground">Total</p>
+        <p className="text-xl font-semibold text-foreground">
           {total.toLocaleString()}
         </p>
       </div>

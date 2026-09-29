@@ -133,16 +133,16 @@ export default function FilesPage() {
               {files.data.map((file) => (
                 <TableRow key={file.id}>
                   <TableCell className="font-medium">{file.originalName}</TableCell>
-                  <TableCell className="text-[#64748B]">{fileType(file)}</TableCell>
-                  <TableCell className="text-[#64748B]">{formatSize(file.sizeBytes)}</TableCell>
-                  <TableCell className="text-[#64748B]">{file.uploadedBy?.name ?? "—"}</TableCell>
-                  <TableCell className="text-[#64748B]">{formatDate(file.createdAt)}</TableCell>
-                  <TableCell className="text-[#64748B]">{attachedTo(file)}</TableCell>
+                  <TableCell className="text-muted-foreground">{fileType(file)}</TableCell>
+                  <TableCell className="text-muted-foreground">{formatSize(file.sizeBytes)}</TableCell>
+                  <TableCell className="text-muted-foreground">{file.uploadedBy?.name ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{formatDate(file.createdAt)}</TableCell>
+                  <TableCell className="text-muted-foreground">{attachedTo(file)}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap justify-end gap-x-3 gap-y-1 text-[12px]">
                       <button
                         type="button"
-                        className="text-[#64748B] hover:text-primary"
+                        className="text-muted-foreground hover:text-primary"
                         onClick={async () => {
                           const url = await previewFileUrl(file.id);
                           setPreview({
@@ -157,7 +157,7 @@ export default function FilesPage() {
                       </button>
                       <button
                         type="button"
-                        className="text-[#64748B] hover:text-primary"
+                        className="text-muted-foreground hover:text-primary"
                         onClick={() => void downloadFile(file.id, file.originalName)}
                       >
                         Download
@@ -166,7 +166,7 @@ export default function FilesPage() {
                         <>
                           <button
                             type="button"
-                            className="text-[#64748B] hover:text-primary"
+                            className="text-muted-foreground hover:text-primary"
                             onClick={() => {
                               setRenaming(file);
                               setName(file.originalName);
@@ -176,14 +176,14 @@ export default function FilesPage() {
                           </button>
                           <button
                             type="button"
-                            className="text-[#64748B] hover:text-primary"
+                            className="text-muted-foreground hover:text-primary"
                             onClick={() => setMoving(file)}
                           >
                             Move
                           </button>
                           <button
                             type="button"
-                            className="text-[#EF4444] hover:underline"
+                            className="text-danger hover:underline"
                             onClick={async () => {
                               await deleteFile(file.id);
                               if (workspaceId) {

@@ -25,25 +25,25 @@ export function ProjectCard({ project }: { project: Project }) {
   return (
     <Link
       href={`/app/projects/${project.id}`}
-      className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-[#F8FAFC]"
+      className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted"
     >
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#EEF2FF] text-[11px] font-semibold text-primary">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary-soft text-[11px] font-semibold text-primary">
         {project.icon || project.name.slice(0, 1).toUpperCase()}
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <h2 className="truncate text-[13px] font-medium text-[#172033]">
+          <h2 className="truncate text-[13px] font-medium text-foreground">
             {project.name}
           </h2>
           <StatusBadge value={project.status} />
         </div>
         {project.description ? (
-          <p className="mt-0.5 truncate text-[12px] text-[#64748B]">
+          <p className="mt-0.5 truncate text-[12px] text-muted-foreground">
             {project.description}
           </p>
         ) : null}
       </div>
-      <p className="hidden shrink-0 text-[12px] text-[#64748B] sm:block">
+      <p className="hidden shrink-0 text-[12px] text-muted-foreground sm:block">
         {project._count.tasks} tasks
       </p>
       <MemberAvatarGroup people={people} />

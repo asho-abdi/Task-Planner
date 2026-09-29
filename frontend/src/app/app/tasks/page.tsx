@@ -202,7 +202,7 @@ function TasksList({ initialQ }: { initialQ: string }) {
         <Button type="submit" variant="outline" size="sm" className="h-8">
           Search
         </Button>
-        <label className="flex items-center gap-2 text-[12px] text-[#64748B] lg:ml-auto">
+        <label className="flex items-center gap-2 text-[12px] text-muted-foreground lg:ml-auto">
           <input
             type="checkbox"
             checked={includeArchived}
@@ -257,10 +257,10 @@ function TasksList({ initialQ }: { initialQ: string }) {
                       {task.title}
                     </Link>
                   </TableCell>
-                  <TableCell className="text-[#64748B]">
+                  <TableCell className="text-muted-foreground">
                     {task.project?.name ?? "No project"}
                   </TableCell>
-                  <TableCell className="text-[#64748B]">
+                  <TableCell className="text-muted-foreground">
                     {(task.assignees ?? []).length
                       ? (task.assignees ?? [])
                           .map((person) => person.name)
@@ -279,7 +279,7 @@ function TasksList({ initialQ }: { initialQ: string }) {
                   <TableCell>
                     <StatusBadge value={task.priority} />
                   </TableCell>
-                  <TableCell className="text-[#64748B]">
+                  <TableCell className="text-muted-foreground">
                     {task.dueDate ? task.dueDate.slice(0, 10) : "—"}
                   </TableCell>
                 </TableRow>
@@ -290,7 +290,7 @@ function TasksList({ initialQ }: { initialQ: string }) {
       )}
 
       <div className="flex items-center justify-between text-[13px]">
-        <p className="text-[#64748B]">
+        <p className="text-muted-foreground">
           {total} tasks · page {page} of {pageCount}
         </p>
         <div className="flex gap-2">
@@ -330,13 +330,13 @@ function TaskBoard({ items }: { items: Task[] }) {
         return (
           <div
             key={status}
-            className="w-64 shrink-0 rounded-[10px] border border-[#E5E7EB] bg-[#F8FAFC] p-2"
+            className="w-64 shrink-0 rounded-[10px] border border-border bg-muted p-2"
           >
             <div className="mb-2 flex items-center justify-between px-1.5 py-1">
-              <p className="text-[12px] font-medium text-[#172033]">
+              <p className="text-[12px] font-medium text-foreground">
                 {status.replaceAll("_", " ")}
               </p>
-              <span className="text-[11px] text-[#94A3B8]">
+              <span className="text-[11px] text-subtle-foreground">
                 {columnItems.length}
               </span>
             </div>
@@ -345,12 +345,12 @@ function TaskBoard({ items }: { items: Task[] }) {
                 <Link
                   key={task.id}
                   href={`/app/tasks/${task.id}`}
-                  className="block rounded-md border border-[#E5E7EB] bg-white px-3 py-2.5 hover:border-[#CBD5E1]"
+                  className="block rounded-md border border-border bg-card px-3 py-2.5 hover:border-border-strong"
                 >
-                  <p className="text-[13px] font-medium text-[#172033]">
+                  <p className="text-[13px] font-medium text-foreground">
                     {task.title}
                   </p>
-                  <p className="mt-0.5 text-[12px] text-[#64748B]">
+                  <p className="mt-0.5 text-[12px] text-muted-foreground">
                     {task.project?.name ?? "No project"}
                   </p>
                   <div className="mt-2">

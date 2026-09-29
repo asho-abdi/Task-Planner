@@ -147,7 +147,7 @@ export default function AutomationsPage() {
               className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
             >
               <div>
-                <p className="font-semibold text-[#172033]">{item.name}</p>
+                <p className="font-semibold text-foreground">{item.name}</p>
                 <p className="mt-1 text-[14px] text-muted-foreground">
                   {labelFor(TRIGGERS, item.trigger)} · {labelFor(ACTIONS, item.action)}
                 </p>
