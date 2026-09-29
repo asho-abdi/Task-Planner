@@ -16,6 +16,8 @@ import {
   FileSpreadsheet,
   FileText,
   FolderKanban,
+  Gauge,
+  ListFilter,
   PieChart,
   Printer,
   SlidersHorizontal,
@@ -44,7 +46,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ErrorState } from "@/components/ui/empty-state";
-import { Progress } from "@/components/ui/progress";
+import { Progress, ProgressRing } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -285,6 +287,13 @@ export default function ReportsPage() {
     pageSize: 8,
   });
 
+  // Resolves task names for activity rows ("approved task" → which task).
+  const recentTasks = useTasks(workspaceId, { pageSize: 100 });
+  const taskTitles = useMemo(
+    () => new Map((recentTasks.data?.items ?? []).map((task) => [task.id, task.title])),
+    [recentTasks.data],
+  );
+
   const byStatus = reports.data?.completion.byStatus ?? {};
   const totalTasks =
     (reports.data?.completion.completed ?? 0) + (reports.data?.completion.open ?? 0);
@@ -292,10 +301,30 @@ export default function ReportsPage() {
   const inProgress = byStatus.IN_PROGRESS ?? 0;
   const inReview = byStatus.IN_REVIEW ?? 0;
   const overdue = reports.data?.overdue.count ?? 0;
-  const prevByStatus = previous.data?.completion.byStatus ?? {};
-  const prevTotal =
-    (previous.data?.completion.completed ?? 0) +
-    (previous.data?.completion.open ?? 0);
+  // Same formula as the API (completed / all live tasks in scope), as a whole percent.
+  const completionRate = totalTasks ? Math.round((completed / totalTasks) * 100) : 0;
+  const hoursPerDay = reports.data?.hoursPerDay ?? 8;
+  const teamLoad = reports.data?.workload.capacityHours
+    ? Math.round((reports.data.workload.todayHours / reports.data.workload.capacityHours) * 100)
+    : 0;
+  // The API returns status/priority/project/overdue figures as a live snapshot (not
+  // date-limited); only "created", the daily trend and meetings follow the date range.
+  const createdInRange = reports.data?.completion.created ?? 0;
+  const completedInRange = (reports.data?.trends ?? []).reduce((sum, row) => sum + row.completed, 0);
+  const meetingsInRange = reports.data?.meetings?.count ?? 0;
+  const prevCreated = previous.data?.completion.created ?? 0;
+  const prevCompletedInRange = (previous.data?.trends ?? []).reduce(
+    (sum, row) => sum + row.completed,
+    0,
+  );
+  const prevMeetings = previous.data?.meetings?.count ?? 0;
+  const openTasks = reports.data?.completion.open ?? 0;
+  /** Previous-period value as a hint; only when that period has loaded. */
+  const prevHint = (value: number, suffix = "") =>
+    previous.data ? `Previous period: ${value}${suffix}` : undefined;
+  /** Percent change, but only when the previous period had data (avoids a fake "+100%"). */
+  const deltaVs = (current: number, prior: number) =>
+    previous.data && prior > 0 ? deltaOf(changeOf(current, prior)) : null;
 
   const slices = STATUS_SLICES.map((item) => ({
     label: taskStatusLabel(item.key),
@@ -354,7 +383,7 @@ export default function ReportsPage() {
   );
 
   const hasFilters = Boolean(
-    projectId || teamId || userId || status || priority || preset !== "30",
+    projectId || teamId || userId || preset !== "30",
   );
 
   function clearFilters() {
@@ -378,11 +407,15 @@ export default function ReportsPage() {
       [],
       ["KPI", "Value"],
       ["Total projects", String(reports.data.projectPerformance.total)],
-      ["Total tasks", String(totalTasks)],
-      ["Completed", String(completed)],
-      ["In progress", String(inProgress)],
-      ["Pending review", String(inReview)],
-      ["Overdue", String(overdue)],
+      ["Range: tasks created", String(createdInRange)],
+      ["Range: tasks completed", String(completedInRange)],
+      ["Live: total tasks", String(totalTasks)],
+      ["Live: completed", String(completed)],
+      ["Live: completion rate %", String(completionRate)],
+      ["Range: meetings", String(meetingsInRange)],
+      ["Live: in progress", String(inProgress)],
+      ["Live: pending review", String(inReview)],
+      ["Live: overdue", String(overdue)],
       [],
       ["Project", "Total", "Completed", "Open", "Overdue", "Completion %"],
       ...reports.data.projectPerformance.items.map((project) => [
@@ -406,7 +439,7 @@ export default function ReportsPage() {
     setExportOpen(false);
   }
 
-  const activeFilterCount = [projectId, teamId, userId, status, priority].filter(
+  const activeFilterCount = [projectId, teamId, userId].filter(
     Boolean,
   ).length;
   const byPriority = reports.data?.completion.byPriority ?? {};
@@ -420,7 +453,7 @@ export default function ReportsPage() {
   const today = localDateYmd();
 
   const filterBar = (
-    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+    <div className="grid gap-2 sm:grid-cols-3">
       <select
         className={nativeSelectClass}
         value={projectId}
@@ -469,11 +502,18 @@ export default function ReportsPage() {
           </option>
         ))}
       </select>
+    </div>
+  );
+
+  // Status/priority are not report API parameters, so they only filter the attention list.
+  const attentionFilters = (
+    <div className="no-print flex flex-wrap items-center gap-2">
+      <ListFilter className="size-3.5 text-subtle-foreground" aria-hidden />
       <select
-        className={nativeSelectClass}
+        className={cn(nativeSelectClass, "h-8 w-auto text-sm")}
         value={status}
         onChange={(event) => setStatus(event.target.value as TaskStatus | "")}
-        aria-label="Task status"
+        aria-label="Filter attention list by status"
       >
         <option value="">Any status</option>
         {TASK_STATUSES.filter((item) => item !== "ARCHIVED").map((item) => (
@@ -483,20 +523,28 @@ export default function ReportsPage() {
         ))}
       </select>
       <select
-        className={nativeSelectClass}
+        className={cn(nativeSelectClass, "h-8 w-auto text-sm")}
         value={priority}
         onChange={(event) => setPriority(event.target.value as Priority | "")}
-        aria-label="Priority"
+        aria-label="Filter attention list by priority"
       >
         <option value="">Any priority</option>
         {PRIORITIES.map((item) => (
           <option key={item} value={item}>
-            {item}
+            {item.charAt(0) + item.slice(1).toLowerCase()}
           </option>
         ))}
       </select>
     </div>
   );
+
+  const scopeLabel = [
+    projectId ? (projects.data ?? []).find((item) => item.id === projectId)?.name : null,
+    teamId ? (teams.data ?? []).find((item) => item.id === teamId)?.name : null,
+    userId ? (members.data ?? []).find((item) => item.userId === userId)?.user.name : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <PageShell>
@@ -651,60 +699,97 @@ export default function ReportsPage() {
         <EmptyState icon={BarChart3} title="Unable to load reports" />
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-            <StatCard
-              label="Projects"
-              value={reports.data.projectPerformance.total}
-              icon={FolderKanban}
-              tone="primary"
-              hint="in this range"
-            />
-            <StatCard
-              label="Total tasks"
-              value={totalTasks}
-              icon={ClipboardList}
-              tone="info"
-              delta={deltaOf(changeOf(totalTasks, prevTotal))}
-              hint="vs previous period"
-            />
-            <StatCard
-              label="Completed"
-              value={completed}
-              icon={CheckCircle2}
-              tone="success"
-              delta={deltaOf(
-                changeOf(completed, previous.data?.completion.completed ?? 0),
-              )}
-            />
-            <StatCard
-              label="In progress"
-              value={inProgress}
-              icon={Timer}
-              tone="primary"
-              delta={deltaOf(changeOf(inProgress, prevByStatus.IN_PROGRESS ?? 0))}
-            />
-            <StatCard
-              label="In review"
-              value={inReview}
-              icon={Eye}
-              tone="warning"
-              delta={deltaOf(changeOf(inReview, prevByStatus.IN_REVIEW ?? 0))}
-            />
-            <StatCard
-              label="Overdue"
-              value={overdue}
-              icon={AlertTriangle}
-              tone={overdue > 0 ? "danger" : "default"}
-              delta={deltaOf(changeOf(overdue, previous.data?.overdue.count ?? 0))}
-              invertDelta
-            />
+          <ReportSummary
+            from={from}
+            to={to}
+            scope={scopeLabel}
+            totalTasks={totalTasks}
+            completed={completed}
+            completionRate={completionRate}
+            createdInRange={createdInRange}
+            completedInRange={completedInRange}
+            open={reports.data.completion.open}
+            overdue={overdue}
+            inReview={inReview}
+            projectsWithWork={reports.data.projectPerformance.total}
+            meetings={reports.data.meetings?.count ?? 0}
+            members={reports.data.workload.memberCount}
+            overloaded={reports.data.workload.overloadedCount}
+            teamLoad={teamLoad}
+            todayHours={reports.data.workload.todayHours}
+            capacityHours={reports.data.workload.capacityHours}
+          />
+
+          <div className="grid gap-4 xl:grid-cols-[3fr_4fr]">
+            <section aria-labelledby="kpi-range" className="space-y-2">
+              <KpiGroupLabel id="kpi-range" title="In selected range" note="vs previous period of equal length" />
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <StatCard
+                  label="Tasks created"
+                  value={createdInRange}
+                  icon={ClipboardList}
+                  tone="info"
+                  delta={deltaVs(createdInRange, prevCreated)}
+                  hint={prevHint(prevCreated)}
+                />
+                <StatCard
+                  label="Tasks completed"
+                  value={completedInRange}
+                  icon={CheckCircle2}
+                  tone="success"
+                  delta={deltaVs(completedInRange, prevCompletedInRange)}
+                  hint={prevHint(prevCompletedInRange)}
+                />
+                <StatCard
+                  label="Meetings"
+                  value={meetingsInRange}
+                  icon={CalendarClock}
+                  tone="primary"
+                  delta={deltaVs(meetingsInRange, prevMeetings)}
+                  hint={prevHint(prevMeetings)}
+                />
+              </div>
+            </section>
+            <section aria-labelledby="kpi-live" className="space-y-2">
+              <KpiGroupLabel id="kpi-live" title="Right now" note="live status of all tasks in scope" />
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <StatCard
+                  label="Open tasks"
+                  value={openTasks}
+                  icon={ListFilter}
+                  tone="default"
+                  hint={`of ${totalTasks} total`}
+                />
+                <StatCard
+                  label="In progress"
+                  value={inProgress}
+                  icon={Timer}
+                  tone="info"
+                  hint={`${totalTasks ? Math.round((inProgress / totalTasks) * 100) : 0}% of tasks`}
+                />
+                <StatCard
+                  label="In review"
+                  value={inReview}
+                  icon={Eye}
+                  tone="warning"
+                  hint={inReview ? "Waiting for a reviewer" : "Nothing waiting"}
+                />
+                <StatCard
+                  label="Overdue"
+                  value={overdue}
+                  icon={AlertTriangle}
+                  tone={overdue > 0 ? "danger" : "default"}
+                  hint={overdue ? "Past due and not done" : "All on schedule"}
+                />
+              </div>
+            </section>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-5">
             <ChartCard
               className="lg:col-span-2"
               title="Status breakdown"
-              description="Status mix from live workspace tasks."
+              description={`Live status of all ${donutTotal} tasks in scope (not limited by date).`}
             >
               {donutTotal === 0 ? (
                 <EmptyState compact icon={PieChart} title="No tasks in this range" />
@@ -730,7 +815,7 @@ export default function ReportsPage() {
             <ChartCard
               className="lg:col-span-3"
               title="Throughput"
-              description="Created vs completed in the selected range."
+              description={`${createdInRange} created · ${completedInRange} completed in this range (completion counted on the day a task was last updated).`}
               action={
                 <SegmentedControl
                   label="Trend granularity"
@@ -771,7 +856,7 @@ export default function ReportsPage() {
             <ListPanel>
               <PanelHeader
                 title="By project"
-                description="Completion and health by project."
+                description={`Live totals for ${reports.data.projectPerformance.total} ${reports.data.projectPerformance.total === 1 ? "project" : "projects"} with tasks. At risk: any overdue task · Delayed: 25%+ overdue.`}
                 icon={FolderKanban}
               />
               {reports.data.projectPerformance.items.length === 0 ? (
@@ -869,7 +954,7 @@ export default function ReportsPage() {
             <ListPanel className="lg:col-span-3">
               <PanelHeader
                 title="By assignee"
-                description="Open load and capacity from live assignments."
+                description={`Open tasks, deadlines this week, and today's scheduled hours against a ${hoursPerDay}h day.`}
                 icon={Users}
               />
               {teamUsers.length === 0 ? (
@@ -880,8 +965,8 @@ export default function ReportsPage() {
                     <TableRow className="hover:bg-transparent">
                       <TableHead>Member</TableHead>
                       <TableHead className="text-right">Open</TableHead>
-                      <TableHead className="text-right">Due soon</TableHead>
-                      <TableHead className="w-40">Load</TableHead>
+                      <TableHead className="text-right">Due this week</TableHead>
+                      <TableHead className="w-56">Today&apos;s load</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -923,13 +1008,17 @@ export default function ReportsPage() {
                               />
                               <span
                                 className={cn(
-                                  "w-10 text-right text-sm tabular",
+                                  "w-24 whitespace-nowrap text-right text-sm tabular",
                                   member.overloaded
                                     ? "font-medium text-danger-soft-foreground"
                                     : "text-muted-foreground",
                                 )}
+                                title={`${(member.utilization * hoursPerDay).toFixed(1)}h of ${hoursPerDay}h scheduled today`}
                               >
                                 {load}%
+                                <span className="ml-1.5 text-2xs font-normal text-subtle-foreground">
+                                  {(member.utilization * hoursPerDay).toFixed(1)}h
+                                </span>
                               </span>
                             </div>
                           </TableCell>
@@ -942,7 +1031,7 @@ export default function ReportsPage() {
             </ListPanel>
 
             <div className="space-y-4 lg:col-span-2">
-              <ChartCard title="By priority" description="Tasks in range by priority.">
+              <ChartCard title="By priority" description={`Live: all ${priorityTotal} tasks in scope, by priority.`}>
                 {priorityTotal === 0 ? (
                   <EmptyState compact icon={BarChart3} title="No priority data" />
                 ) : (
@@ -951,14 +1040,14 @@ export default function ReportsPage() {
               </ChartCard>
 
               <ChartCard
-                title="My productivity"
-                description={`Your work for today, ${user.data?.name?.split(" ")[0] ?? "you"}.`}
+                title="My day"
+                description={`Your My Day list for today, ${user.data?.name?.split(" ")[0] ?? "you"}. Not affected by report filters.`}
               >
                 <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {[
-                    { label: "Assigned", value: myAssigned },
-                    { label: "Completed", value: myCompleted.length },
-                    { label: "Pending", value: myOpen.length },
+                    { label: "On my list", value: myAssigned },
+                    { label: "Done", value: myCompleted.length },
+                    { label: "Due today", value: myOpen.length },
                     { label: "Overdue", value: myOverdue.length, danger: myOverdue.length > 0 },
                   ].map((item) => (
                     <div key={item.label} className="rounded-lg bg-muted/60 px-2.5 py-2">
@@ -976,7 +1065,7 @@ export default function ReportsPage() {
                 </dl>
                 <div className="mt-4 space-y-1.5">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Completion rate</span>
+                    <span className="text-muted-foreground">Done today</span>
                     <span className="font-medium text-foreground tabular">{myRate}%</span>
                   </div>
                   <Progress
@@ -985,12 +1074,9 @@ export default function ReportsPage() {
                     aria-label="My completion rate"
                   />
                 </div>
-                <p className="mt-3 text-xs text-subtle-foreground">
-                  Average completion time is not tracked in this workspace yet.
-                </p>
                 {dashboard.data ? (
-                  <p className="mt-1 text-xs text-muted-foreground tabular">
-                    Workspace snapshot: {dashboard.data.totals.completed} completed ·{" "}
+                  <p className="mt-3 text-xs text-muted-foreground tabular">
+                    All-time workspace totals: {dashboard.data.totals.completed} completed ·{" "}
                     {dashboard.data.totals.overdue} overdue
                   </p>
                 ) : null}
@@ -1003,8 +1089,9 @@ export default function ReportsPage() {
           <ListPanel>
             <PanelHeader
               title="Attention required"
-              description="Overdue, returned, and waiting for review."
+              description="Overdue, returned and awaiting review right now (not limited to the date range)."
               icon={AlertTriangle}
+              action={attentionFilters}
             />
             {attention.length === 0 && dueSoon.length === 0 ? (
               <EmptyState compact icon={CheckCircle2} title="Nothing needs attention" />
@@ -1137,6 +1224,14 @@ export default function ReportsPage() {
                           {item.actor?.name ?? "Someone"}
                         </span>{" "}
                         {item.title}
+                        {item.entityType === "task" && item.entityId && taskTitles.get(item.entityId) ? (
+                          <>
+                            {" "}
+                            <span className="font-medium text-foreground">
+                              “{taskTitles.get(item.entityId)}”
+                            </span>
+                          </>
+                        ) : null}
                       </p>
                       <span className="shrink-0 text-xs text-subtle-foreground">
                         {formatRelativeTime(item.createdAt)}
@@ -1205,6 +1300,159 @@ function PanelHeader({
         </div>
       </div>
       {action}
+    </div>
+  );
+}
+
+/** Headline band: completion ring plus a plain-language summary built from the same numbers as the KPIs. */
+function ReportSummary({
+  from,
+  to,
+  scope,
+  totalTasks,
+  completed,
+  completionRate,
+  createdInRange,
+  completedInRange,
+  open,
+  overdue,
+  inReview,
+  projectsWithWork,
+  meetings,
+  members,
+  overloaded,
+  teamLoad,
+  todayHours,
+  capacityHours,
+}: {
+  from: string;
+  to: string;
+  scope: string;
+  totalTasks: number;
+  completed: number;
+  completionRate: number;
+  createdInRange: number;
+  completedInRange: number;
+  open: number;
+  overdue: number;
+  inReview: number;
+  projectsWithWork: number;
+  meetings: number;
+  members: number;
+  overloaded: number;
+  teamLoad: number;
+  todayHours: number;
+  capacityHours: number;
+}) {
+  const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? "" : "s"}`;
+  const findings: Array<{ tone: "success" | "warning" | "danger" | "info"; text: string }> = [];
+  findings.push({
+    tone: "info",
+    text: `In this range: ${plural(createdInRange, "task")} created, ${completedInRange} completed, ${plural(meetings, "meeting")}.`,
+  });
+  if (totalTasks === 0) {
+    findings.push({ tone: "info", text: "There are no tasks in scope yet." });
+  } else {
+    findings.push({
+      tone: completionRate >= 50 ? "success" : "info",
+      text: `Right now: ${completed} of ${plural(totalTasks, "task")} done (${completionRate}%), ${open} still open.`,
+    });
+  }
+  findings.push(
+    overdue > 0
+      ? { tone: "danger", text: `${plural(overdue, "task")} overdue and need attention.` }
+      : { tone: "success", text: "Nothing is overdue." },
+  );
+  if (inReview > 0) {
+    findings.push({ tone: "warning", text: `${plural(inReview, "task")} waiting for review.` });
+  }
+  findings.push(
+    overloaded > 0
+      ? {
+          tone: "warning",
+          text: `${overloaded} of ${plural(members, "person")} over capacity today.`.replace("persons", "people"),
+        }
+      : { tone: "success", text: "Everyone is within capacity today." },
+  );
+
+  const dot = {
+    success: "bg-success",
+    warning: "bg-warning",
+    danger: "bg-danger",
+    info: "bg-info",
+  } as const;
+
+  return (
+    <Surface className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center lg:gap-8">
+      <div className="flex items-center gap-4">
+        <ProgressRing value={completionRate} size={92} stroke={8}>
+          <span className="font-heading text-lg font-semibold">{completionRate}%</span>
+        </ProgressRing>
+        <div>
+          <p className="text-sm text-muted-foreground">Done right now</p>
+          <p className="font-heading text-2xl font-semibold tracking-[-0.02em] tabular">
+            {completed}
+            <span className="text-lg text-subtle-foreground"> / {totalTasks}</span>
+          </p>
+          <p className="text-xs text-muted-foreground">of all tasks in scope</p>
+        </div>
+      </div>
+
+      <div className="min-w-0 border-border lg:border-l lg:pl-8">
+        <p className="text-2xs font-medium uppercase tracking-[0.08em] text-subtle-foreground">
+          Summary · {formatDate(from)} – {formatDate(to)}
+          {scope ? ` · ${scope}` : ""}
+        </p>
+        <ul className="mt-2 space-y-1.5">
+          {findings.map((item) => (
+            <li key={item.text} className="flex items-start gap-2.5 text-base text-foreground">
+              <span className={cn("mt-[7px] size-1.5 shrink-0 rounded-full", dot[item.tone])} aria-hidden />
+              {item.text}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <dl className="grid grid-cols-3 gap-2 lg:w-[300px] lg:grid-cols-1">
+        {[
+          { icon: FolderKanban, label: "Projects with tasks", value: String(projectsWithWork) },
+          { icon: Users, label: "Team members", value: String(members) },
+          {
+            icon: Gauge,
+            label: "Team load today",
+            value: `${teamLoad}%`,
+            detail: `${todayHours.toFixed(1)}h / ${capacityHours}h`,
+          },
+        ].map((item) => {
+          const Icon = item.icon;
+          return (
+            <div
+              key={item.label}
+              className="flex flex-col gap-1 rounded-lg bg-muted/60 px-3 py-2 lg:flex-row lg:items-center lg:gap-2.5"
+            >
+              <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+              <dt className="text-2xs text-muted-foreground lg:flex-1 lg:text-sm">{item.label}</dt>
+              <dd className="font-medium text-foreground tabular">
+                {item.value}
+                {item.detail ? (
+                  <span className="ml-1.5 text-2xs font-normal text-subtle-foreground">{item.detail}</span>
+                ) : null}
+              </dd>
+            </div>
+          );
+        })}
+      </dl>
+    </Surface>
+  );
+}
+
+function KpiGroupLabel({ id, title, note }: { id: string; title: string; note: string }) {
+  return (
+    <div className="flex flex-wrap items-baseline gap-x-2">
+      <h2 id={id} className="text-sm font-semibold text-foreground">
+        {title}
+      </h2>
+      <p className="text-xs text-muted-foreground">{note}</p>
     </div>
   );
 }

@@ -105,16 +105,28 @@ function AvatarStack({
   const shown = people.slice(0, max);
   const rest = people.length - shown.length;
   return (
-    <div className={cn("flex items-center -space-x-1.5", className)}>
+    <div
+      className={cn(
+        "flex items-center",
+        size === "xs" || size === "sm" ? "-space-x-1" : "-space-x-1.5",
+        className,
+      )}
+    >
       {shown.map((person, index) => (
-        <Avatar
+        // Earlier avatars sit on top so every set of initials stays readable.
+        <span
           key={person.id ?? index}
-          name={person.name}
-          src={person.avatarUrl}
-          size={size}
-          title={person.name ?? undefined}
-          className="ring-2 ring-card"
-        />
+          className="relative inline-flex"
+          style={{ zIndex: shown.length - index }}
+        >
+          <Avatar
+            name={person.name}
+            src={person.avatarUrl}
+            size={size}
+            title={person.name ?? undefined}
+            className="ring-2 ring-card"
+          />
+        </span>
       ))}
       {rest > 0 ? (
         <span
