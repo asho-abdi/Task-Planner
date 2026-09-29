@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/components/ui/toast";
 import {
   useCreateWorkspace,
   useWorkspaces,
 } from "@/features/workspaces/hooks";
+import { WorkspaceMark } from "@/features/workspaces/workspace-switcher";
 import { nativeSelectClass, readImageAsDataUrl } from "@/lib/utils";
 
 type CreateWorkspaceDialogProps = {
@@ -41,12 +43,14 @@ export function CreateWorkspaceDialog({
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     try {
+      const workspaceName = name.trim();
       await createWorkspace.mutateAsync({
         name,
         description: description.trim() || undefined,
         logo: logo ?? undefined,
       });
       handleOpenChange(false);
+      toast.success(`Workspace “${workspaceName}” created`);
     } catch {
       // Error is shown from the mutation.
     }
@@ -66,15 +70,31 @@ export function CreateWorkspaceDialog({
           <Button
             type="submit"
             form="create-workspace-form"
-            disabled={!name.trim() || createWorkspace.isPending}
+            disabled={!name.trim()}
+            loading={createWorkspace.isPending}
           >
-            Create
+            Create workspace
           </Button>
         </>
       }
     >
       <form id="create-workspace-form" className="space-y-4" onSubmit={handleSubmit}>
-        <div className="space-y-2">
+        <div className="flex items-center gap-4 rounded-lg border border-border bg-muted/40 p-3">
+          <WorkspaceMark
+            name={name.trim() || "W"}
+            logo={logo}
+            className="size-12 rounded-xl text-lg"
+          />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-base font-medium text-foreground">
+              {name.trim() || "Untitled workspace"}
+            </p>
+            <p className="truncate text-sm text-muted-foreground">
+              {description.trim() || "Preview of how it appears in the switcher"}
+            </p>
+          </div>
+        </div>
+        <div className="space-y-1.5">
           <Label htmlFor="workspace-name">Name</Label>
           <Input
             id="workspace-name"
@@ -84,7 +104,7 @@ export function CreateWorkspaceDialog({
             autoFocus
           />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor="workspace-description">Description</Label>
           <Input
             id="workspace-description"
@@ -93,7 +113,7 @@ export function CreateWorkspaceDialog({
             placeholder="Optional"
           />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor="workspace-logo">Workspace logo</Label>
           <Input
             id="workspace-logo"
@@ -114,20 +134,25 @@ export function CreateWorkspaceDialog({
                 });
             }}
           />
-          {logo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={logo} alt="" className="h-10 w-10 rounded-lg object-cover" />
-          ) : null}
           {logoError ? (
-            <p className="text-sm text-destructive">{logoError}</p>
-          ) : null}
+            <p className="text-sm text-danger-soft-foreground">{logoError}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Optional. Square images work best.
+            </p>
+          )}
         </div>
-        <div className="space-y-2">
-          <Label>Copy settings from</Label>
+        <div className="space-y-1.5">
+          <Label htmlFor="workspace-copy-from">Copy settings from</Label>
           {workspaces.isLoading ? (
             <Skeleton className="h-9 w-full" />
           ) : (
-            <select className={nativeSelectClass} defaultValue="" disabled>
+            <select
+              id="workspace-copy-from"
+              className={nativeSelectClass}
+              defaultValue=""
+              disabled
+            >
               <option value="">None</option>
               {(workspaces.data ?? []).map((workspace) => (
                 <option key={workspace.id} value={workspace.id}>
@@ -141,7 +166,7 @@ export function CreateWorkspaceDialog({
           </p>
         </div>
         {createWorkspace.error ? (
-          <p className="text-sm text-destructive">
+          <p className="text-sm text-danger-soft-foreground">
             {createWorkspace.error.message}
           </p>
         ) : null}
