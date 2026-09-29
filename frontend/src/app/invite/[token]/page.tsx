@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Suspense, useState, type FormEvent, type ReactNode } from "react";
+import { MailOpen, MailX } from "lucide-react";
 import { AuthCard, AuthLayout } from "@/components/auth/auth-layout";
+import { PasswordInput } from "@/components/auth/password-input";
+import { ErrorState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,7 +50,14 @@ function InviteTokenContent() {
         panelTitle="Checking your invite."
         panelDescription="We are loading the workspace you were invited to join."
       >
-        <p className="text-sm text-muted-foreground">Loading invitation…</p>
+        <AuthCard>
+          <div role="status" aria-label="Loading invitation" className="space-y-4">
+            <Skeleton className="size-10 rounded-lg" />
+            <Skeleton className="h-6 w-2/3" />
+            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        </AuthCard>
       </AuthLayout>
     );
   }
@@ -59,10 +70,13 @@ function InviteTokenContent() {
         panelDescription="The link may have expired, been revoked, or already used."
       >
         <AuthCard>
-          <h2 className="text-2xl font-semibold tracking-tight">
+          <span className="flex size-10 items-center justify-center rounded-lg bg-danger-soft text-danger-soft-foreground">
+            <MailX className="size-5" />
+          </span>
+          <h2 className="mt-4 font-heading text-2xl font-semibold tracking-[-0.02em]">
             Invitation unavailable
           </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-2 text-base text-muted-foreground">
             {preview.error?.message ?? "This invitation is invalid or expired."}
           </p>
           <Button className="mt-6" asChild>
@@ -122,9 +136,9 @@ function InviteTokenContent() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input
+                <PasswordInput
                   id="password"
-                  type="password"
+                  autoComplete="new-password"
                   minLength={8}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
@@ -132,14 +146,14 @@ function InviteTokenContent() {
                 />
               </div>
               {register.error ? (
-                <p className="text-sm text-destructive">{register.error.message}</p>
+                <ErrorState title="Couldn't create your account" description={register.error.message} />
               ) : null}
-              <Button className="w-full" type="submit" disabled={register.isPending}>
-                {register.isPending ? "Creating account..." : "Create account and join"}
+              <Button className="w-full" type="submit" loading={register.isPending}>
+                Create account and join
               </Button>
               <button
                 type="button"
-                className="w-full text-sm text-muted-foreground hover:text-foreground"
+                className="w-full rounded-md py-1 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 onClick={() => setMode("choose")}
               >
                 Back
@@ -161,32 +175,35 @@ function InviteTokenContent() {
             </div>
           )
         ) : !emailMatches ? (
-          <p className="mt-6 text-sm text-destructive">
-            This invitation was sent to {invite.email}. You are signed in as{" "}
-            {user.email}.
-          </p>
+          <ErrorState
+            className="mt-6"
+            title="Signed in with a different email"
+            description={`This invitation was sent to ${invite.email}. You are signed in as ${user.email}.`}
+          />
         ) : (
           <div className="mt-6 flex flex-col gap-2 sm:flex-row">
             <Button
+              className="flex-1"
               onClick={() => void handleAccept()}
-              disabled={accept.isPending}
+              loading={accept.isPending}
             >
-              {accept.isPending ? "Joining..." : "Accept"}
+              Accept and join
             </Button>
             <Button
+              className="flex-1"
               variant="outline"
               onClick={() => void handleDecline()}
-              disabled={decline.isPending}
+              loading={decline.isPending}
             >
               Decline
             </Button>
           </div>
         )}
         {accept.error ? (
-          <p className="mt-3 text-sm text-destructive">{accept.error.message}</p>
+          <ErrorState className="mt-4" title="Couldn't accept the invitation" description={accept.error.message} />
         ) : null}
         {decline.error ? (
-          <p className="mt-3 text-sm text-destructive">{decline.error.message}</p>
+          <ErrorState className="mt-4" title="Couldn't decline the invitation" description={decline.error.message} />
         ) : null}
       </InviteBody>
     </AuthLayout>
@@ -204,9 +221,12 @@ function InviteBody({
 }) {
   return (
     <AuthCard>
-      <h2 className="text-2xl font-semibold tracking-tight">{title}</h2>
+      <span className="flex size-10 items-center justify-center rounded-lg bg-primary-soft text-primary-soft-foreground">
+        <MailOpen className="size-5" />
+      </span>
+      <h2 className="mt-4 font-heading text-2xl font-semibold tracking-[-0.02em]">{title}</h2>
       {description ? (
-        <p className="mt-1.5 text-sm text-muted-foreground">{description}</p>
+        <p className="mt-1.5 text-base text-muted-foreground">{description}</p>
       ) : null}
       {children}
     </AuthCard>

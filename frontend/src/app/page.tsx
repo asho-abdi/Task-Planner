@@ -1,352 +1,373 @@
 import Link from "next/link";
-import { Instrument_Serif } from "next/font/google";
 import {
   ArrowRight,
+  BarChart3,
+  Bell,
   CalendarDays,
+  Check,
   CheckSquare,
+  Command,
   FolderKanban,
+  Gauge,
+  Lock,
+  MessageSquare,
+  Sparkles,
+  Target,
   Users,
+  type LucideIcon,
 } from "lucide-react";
+import { Logo } from "@/components/brand";
+import { ProductPreview } from "@/components/marketing/product-preview";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { buttonVariants } from "@/components/ui/button";
+import { Kbd } from "@/components/ui/kbd";
+import { cn } from "@/lib/utils";
 
-const display = Instrument_Serif({
-  weight: "400",
-  subsets: ["latin"],
-  display: "swap",
-});
+const FEATURES: Array<{ icon: LucideIcon; title: string; body: string }> = [
+  {
+    icon: CheckSquare,
+    title: "Tasks with a real path",
+    body: "Start, submit, review, complete. Status follows the work instead of a checkbox you forget to tick.",
+  },
+  {
+    icon: FolderKanban,
+    title: "Projects that hold the rest",
+    body: "Board, timeline, files, meetings, chat and notes live on the project itself.",
+  },
+  {
+    icon: CalendarDays,
+    title: "Meetings that leave a trail",
+    body: "Agendas, RSVPs, notes and decisions. Action items turn into tasks in one click.",
+  },
+  {
+    icon: Gauge,
+    title: "Workload you can see",
+    body: "Spot who's overloaded this week before you assign one more thing.",
+  },
+  {
+    icon: Target,
+    title: "Goals tied to delivery",
+    body: "Link goals to projects and tasks so progress is measured, not guessed.",
+  },
+  {
+    icon: BarChart3,
+    title: "Reports and risk",
+    body: "Throughput, overdue trends and at-risk projects — ready before the status meeting.",
+  },
+];
 
-function Mark({ className = "" }: { className?: string }) {
+const STEPS = [
+  {
+    title: "Create a workspace",
+    body: "One per company, client or team. Each keeps its own people, files and deadlines.",
+  },
+  {
+    title: "Invite by role",
+    body: "Owners, admins, members and viewers. Invitations expire after seven days.",
+  },
+  {
+    title: "Plan the day, ship the work",
+    body: "My Day shows what's due, what's late and what's next — across every project.",
+  },
+];
+
+const ROLES = [
+  { role: "Owner", detail: "Workspace settings and every permission" },
+  { role: "Admin", detail: "Invite people, manage projects and teams" },
+  { role: "Member", detail: "Create and deliver work" },
+  { role: "Viewer", detail: "Read-only visibility for stakeholders" },
+];
+
+function SectionHeading({
+  eyebrow,
+  title,
+  description,
+  className,
+}: {
+  eyebrow: string;
+  title: string;
+  description?: string;
+  className?: string;
+}) {
   return (
-    <span
-      className={`inline-flex h-8 w-8 items-center justify-center rounded-md bg-[#635BFF] text-[10px] font-semibold tracking-wide text-white ${className}`}
-    >
-      TPT
-    </span>
+    <div className={cn("max-w-2xl", className)}>
+      <p className="text-sm font-medium text-primary">{eyebrow}</p>
+      <h2 className="mt-3 font-heading text-3xl font-semibold tracking-[-0.03em] text-foreground sm:text-4xl">
+        {title}
+      </h2>
+      {description ? (
+        <p className="mt-4 text-lg text-muted-foreground">{description}</p>
+      ) : null}
+    </div>
   );
 }
 
 export default function HomePage() {
   return (
-    <div className="marketing-page min-h-full bg-[#F6F4EF] text-[#172033]">
-      <header className="sticky top-0 z-30 border-b border-[#E7E2D9]/80 bg-[#F6F4EF]/85 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-8">
-          <Link href="/" className="flex items-center gap-2.5">
-            <Mark />
-            <span className="text-sm font-semibold tracking-tight">
-              Task Planner and Tracker
-            </span>
-          </Link>
-          <nav className="hidden items-center gap-8 text-sm text-[#5C6570] md:flex">
-            <a href="#work" className="transition-colors hover:text-[#172033]">
-              Product
-            </a>
-            <a href="#rhythm" className="transition-colors hover:text-[#172033]">
-              Daily rhythm
-            </a>
-            <a href="#workspaces" className="transition-colors hover:text-[#172033]">
-              Workspaces
-            </a>
+    <div className="min-h-full bg-background text-foreground">
+      <a
+        href="#main"
+        className="sr-only z-toast rounded-md bg-card px-3 py-2 text-base shadow-md focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
+      >
+        Skip to content
+      </a>
+
+      <header className="sticky top-0 z-header border-b border-border/70 bg-background/80 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-5 sm:px-8">
+          <Logo />
+          <nav aria-label="Primary" className="hidden items-center gap-1 md:flex">
+            {[
+              ["Features", "#features"],
+              ["How it works", "#how-it-works"],
+              ["Workspaces", "#workspaces"],
+            ].map(([label, href]) => (
+              <a
+                key={href}
+                href={href}
+                className="rounded-md px-3 py-1.5 text-base text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {label}
+              </a>
+            ))}
           </nav>
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5">
+            <ThemeToggle />
             <Link
               href="/login"
-              className="rounded-md px-3 py-2 text-sm font-medium text-[#172033] transition-colors hover:bg-[#EDE9E1]"
+              className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "hidden sm:inline-flex")}
             >
               Sign in
             </Link>
-            <Link
-              href="/register"
-              className="rounded-md bg-[#635BFF] px-3.5 py-2 text-sm font-medium text-white shadow-[0_1px_0_rgba(255,255,255,0.24)_inset] transition-colors hover:bg-[#5147E8]"
-            >
+            <Link href="/register" className={buttonVariants({ size: "sm" })}>
               Get started
             </Link>
           </div>
         </div>
       </header>
 
-      <main>
-        <section className="mx-auto grid max-w-6xl items-end gap-12 px-5 pb-16 pt-14 sm:px-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-16 lg:pb-24 lg:pt-20">
-          <div>
-            <p className="text-[13px] text-[#6B6358]">
-              For teams who share a calendar, not a mess of chats.
-            </p>
-            <h1
-              className={`${display.className} mt-5 max-w-[12ch] text-[3.35rem] leading-[0.95] text-[#172033] sm:text-7xl`}
-            >
-              See the day. Finish the work.
-            </h1>
-            <p className="mt-6 max-w-md text-[17px] leading-8 text-[#4B5563]">
-              Tasks, meetings, and project progress sit next to each other.
-              Each workspace stays its own house — people, files, and deadlines
-              included.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
+      <main id="main">
+        {/* Hero */}
+        <section className="relative overflow-hidden">
+          <div
+            aria-hidden
+            className="surface-grid absolute inset-0 opacity-60 [mask-image:radial-gradient(ellipse_at_top,black_20%,transparent_70%)]"
+          />
+          <div
+            aria-hidden
+            className="absolute left-1/2 top-[-240px] size-[640px] -translate-x-1/2 rounded-full bg-primary/15 blur-[120px]"
+          />
+          <div className="relative mx-auto max-w-6xl px-5 pb-16 pt-16 sm:px-8 sm:pt-24">
+            <div className="mx-auto max-w-3xl text-center">
               <Link
                 href="/register"
-                className="inline-flex h-11 items-center gap-2 rounded-md bg-[#635BFF] px-5 text-sm font-medium text-white transition-colors hover:bg-[#5147E8]"
+                className="group inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-sm text-muted-foreground shadow-xs transition-colors hover:border-border-strong hover:text-foreground"
               >
-                Create a workspace
-                <ArrowRight className="h-4 w-4" />
+                <Sparkles className="size-3.5 text-primary" />
+                Multi-workspace planning for teams
+                <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
               </Link>
-              <Link
-                href="/login"
-                className="inline-flex h-11 items-center rounded-md border border-[#D9D3C8] bg-transparent px-5 text-sm font-medium text-[#172033] transition-colors hover:bg-white"
-              >
-                I already have an account
+              <h1 className="mt-6 font-heading text-5xl font-semibold tracking-[-0.04em] text-foreground sm:text-6xl">
+                See the day.
+                <br />
+                <span className="text-primary">Finish the work.</span>
+              </h1>
+              <p className="mx-auto mt-6 max-w-xl text-lg text-muted-foreground">
+                Tasks, meetings and project progress sit side by side. Each
+                workspace stays its own house — people, files and deadlines
+                included.
+              </p>
+              <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                <Link href="/register" className={cn(buttonVariants({ size: "xl" }), "w-full sm:w-auto")}>
+                  Create a workspace
+                  <ArrowRight />
+                </Link>
+                <Link
+                  href="/login"
+                  className={cn(buttonVariants({ variant: "outline", size: "xl" }), "w-full sm:w-auto")}
+                >
+                  I already have an account
+                </Link>
+              </div>
+              <ul className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
+                {["Role-based access", "Realtime chat", "Dark mode included"].map((item) => (
+                  <li key={item} className="flex items-center gap-1.5">
+                    <Check className="size-3.5 text-success" strokeWidth={3} />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="relative mx-auto mt-14 max-w-4xl">
+              <div
+                aria-hidden
+                className="absolute -inset-x-10 -bottom-10 top-10 rounded-[2rem] bg-primary/10 blur-3xl"
+              />
+              <ProductPreview className="relative" />
+              <div className="absolute -right-3 top-1/3 hidden animate-slide-up rounded-xl border border-border bg-popover p-3 shadow-lg md:block">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex size-8 items-center justify-center rounded-lg bg-success-soft text-success-soft-foreground">
+                    <Check className="size-4" strokeWidth={2.5} />
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium">Review approved</p>
+                    <p className="text-xs text-muted-foreground">Website redesign · just now</p>
+                  </div>
+                </div>
+              </div>
+              <div className="absolute -left-4 bottom-10 hidden rounded-xl border border-border bg-popover px-3 py-2 shadow-lg md:flex md:items-center md:gap-2">
+                <Command className="size-3.5 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Jump anywhere</span>
+                <Kbd>Ctrl K</Kbd>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Features */}
+        <section id="features" className="scroll-mt-20 border-t border-border bg-card/50 py-20 sm:py-28">
+          <div className="mx-auto max-w-6xl px-5 sm:px-8">
+            <SectionHeading
+              eyebrow="Features"
+              title="Everything the week needs, nothing it doesn't."
+              description="One place for the plan and the proof it happened — without stitching five tools together."
+            />
+            <div className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-3">
+              {FEATURES.map((feature) => {
+                const Icon = feature.icon;
+                return (
+                  <div
+                    key={feature.title}
+                    className="group bg-card p-6 transition-colors duration-200 hover:bg-muted/60 sm:p-7"
+                  >
+                    <span className="flex size-10 items-center justify-center rounded-lg border border-border bg-background text-primary shadow-xs transition-transform duration-200 group-hover:-translate-y-0.5">
+                      <Icon className="size-5" strokeWidth={1.75} />
+                    </span>
+                    <h3 className="mt-5 text-md font-semibold text-foreground">{feature.title}</h3>
+                    <p className="mt-2 text-base text-muted-foreground">{feature.body}</p>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-6 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <span>Also included:</span>
+              {[
+                { icon: MessageSquare, label: "Channels & DMs" },
+                { icon: Bell, label: "Smart notifications" },
+                { icon: Users, label: "Teams" },
+                { icon: Sparkles, label: "Automations" },
+              ].map(({ icon: Icon, label }) => (
+                <span
+                  key={label}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1"
+                >
+                  <Icon className="size-3.5" />
+                  {label}
+                </span>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* How it works */}
+        <section id="how-it-works" className="scroll-mt-20 py-20 sm:py-28">
+          <div className="mx-auto max-w-6xl px-5 sm:px-8">
+            <SectionHeading
+              eyebrow="How it works"
+              title="From sign-up to a shared plan in minutes."
+              className="mx-auto text-center"
+            />
+            <ol className="mt-14 grid gap-6 md:grid-cols-3">
+              {STEPS.map((step, index) => (
+                <li key={step.title} className="relative rounded-2xl border border-border bg-card p-6 shadow-xs">
+                  <span className="flex size-9 items-center justify-center rounded-full bg-primary font-heading text-base font-semibold text-primary-foreground tabular">
+                    {index + 1}
+                  </span>
+                  <h3 className="mt-5 text-md font-semibold">{step.title}</h3>
+                  <p className="mt-2 text-base text-muted-foreground">{step.body}</p>
+                  {index < STEPS.length - 1 ? (
+                    <ArrowRight
+                      aria-hidden
+                      className="absolute -right-5 top-1/2 hidden size-4 -translate-y-1/2 text-subtle-foreground md:block"
+                    />
+                  ) : null}
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        {/* Workspaces / roles */}
+        <section id="workspaces" className="scroll-mt-20 px-5 pb-20 sm:px-8 sm:pb-28">
+          <div className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl bg-ink px-6 py-12 text-ink-foreground sm:px-12 sm:py-16">
+            <div
+              aria-hidden
+              className="absolute -right-32 -top-32 size-[420px] rounded-full bg-primary/40 blur-[120px]"
+            />
+            <div className="relative grid items-center gap-10 lg:grid-cols-2">
+              <div>
+                <p className="flex items-center gap-2 text-sm font-medium text-ink-accent">
+                  <Lock className="size-3.5" />
+                  Isolation by design
+                </p>
+                <h2 className="mt-3 font-heading text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
+                  One company, many rooms.
+                </h2>
+                <p className="mt-4 max-w-md text-lg text-ink-muted">
+                  Keep clients, squads or departments in separate workspaces.
+                  Nothing leaks across the wall — every request is checked
+                  against your membership.
+                </p>
+                <Link
+                  href="/register"
+                  className={cn(buttonVariants({ size: "lg" }), "mt-8")}
+                >
+                  Start a workspace
+                  <ArrowRight />
+                </Link>
+              </div>
+              <ul className="divide-y divide-ink-border overflow-hidden rounded-2xl border border-ink-border bg-ink-foreground/5">
+                {ROLES.map((item) => (
+                  <li key={item.role} className="flex items-center justify-between gap-4 px-5 py-4">
+                    <span className="font-medium">{item.role}</span>
+                    <span className="text-right text-base text-ink-muted">{item.detail}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA */}
+        <section className="border-t border-border py-20 sm:py-24">
+          <div className="mx-auto max-w-3xl px-5 text-center sm:px-8">
+            <h2 className="font-heading text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
+              Open it in the morning. Trust it all day.
+            </h2>
+            <p className="mt-4 text-lg text-muted-foreground">
+              Set up your first workspace now — invite the team when you&apos;re ready.
+            </p>
+            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+              <Link href="/register" className={buttonVariants({ size: "xl" })}>
+                Get started
+                <ArrowRight />
+              </Link>
+              <Link href="/login" className={buttonVariants({ variant: "outline", size: "xl" })}>
+                Sign in
               </Link>
             </div>
-            <p className="mt-5 text-xs text-[#8A8278]">
-              Owners, admins, members, and viewers — roles stay inside the
-              workspace.
-            </p>
           </div>
-
-          <ProductPreview />
-        </section>
-
-        <section
-          id="work"
-          className="border-y border-[#E7E2D9] bg-[#FFFDF8]"
-        >
-          <div className="mx-auto grid max-w-6xl gap-px bg-[#E7E2D9] sm:grid-cols-2 lg:grid-cols-4">
-            <Fact
-              kicker="01"
-              title="My Day"
-              body="Today, overdue, and done — in one list, not three apps."
-            />
-            <Fact
-              kicker="02"
-              title="Projects"
-              body="Board, timeline, files, and notes live on the project itself."
-            />
-            <Fact
-              kicker="03"
-              title="Meetings"
-              body="Agenda, notes, and action items without a side document."
-            />
-            <Fact
-              kicker="04"
-              title="People"
-              body="Teams, workload, and who actually owns the next step."
-            />
-          </div>
-        </section>
-
-        <section id="rhythm" className="mx-auto max-w-6xl px-5 py-20 sm:px-8">
-          <div className="max-w-xl">
-            <h2
-              className={`${display.className} text-4xl leading-tight sm:text-5xl`}
-            >
-              A page you open in the morning and trust.
-            </h2>
-            <p className="mt-4 text-[16px] leading-7 text-[#4B5563]">
-              The dashboard answers five questions and then gets out of the
-              way.
-            </p>
-          </div>
-
-          <ol className="mt-12 divide-y divide-[#E7E2D9] border-y border-[#E7E2D9]">
-            <RhythmRow n="1" q="What do I need to do?" a="Today’s tasks, with project, priority, and due time." />
-            <RhythmRow n="2" q="What meetings do I have?" a="The next few, with online or in-person marked clearly." />
-            <RhythmRow n="3" q="What’s coming due?" a="Deadlines for the next two weeks, not a buried calendar." />
-            <RhythmRow n="4" q="Which projects are moving?" a="Progress bars and people, not a status meeting." />
-            <RhythmRow n="5" q="What happened while I was away?" a="Recent activity, written as it actually occurred." />
-          </ol>
-        </section>
-
-        <section
-          id="workspaces"
-          className="mx-auto grid max-w-6xl items-center gap-12 px-5 pb-24 sm:px-8 lg:grid-cols-[0.9fr_1.1fr]"
-        >
-          <div className="rounded-2xl bg-[#0B1220] px-8 py-10 text-[#E8EDF5] sm:px-10">
-            <p className="text-xs font-medium uppercase tracking-[0.16em] text-[#9AA7B8]">
-              Isolation
-            </p>
-            <h2
-              className={`${display.className} mt-4 text-4xl leading-tight text-white`}
-            >
-              One company, many rooms.
-            </h2>
-            <p className="mt-4 max-w-sm text-sm leading-7 text-[#B7C2D0]">
-              Invite by role. Keep clients, squads, or departments in separate
-              workspaces. Nothing leaks across the wall.
-            </p>
-            <Link
-              href="/register"
-              className="mt-8 inline-flex items-center gap-2 text-sm font-medium text-white"
-            >
-              Start a workspace
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-
-          <ul className="grid gap-4 sm:grid-cols-2">
-            <Capability
-              icon={CheckSquare}
-              title="Tasks with a real path"
-              body="Start work, submit, review, then complete. Status isn’t a checkbox you skip."
-            />
-            <Capability
-              icon={FolderKanban}
-              title="Projects that hold the rest"
-              body="Tasks, files, chat, calendar, and notes stay attached to the project."
-            />
-            <Capability
-              icon={CalendarDays}
-              title="Meetings that leave a trail"
-              body="Participants RSVP. Notes autosave. Action items become tasks."
-            />
-            <Capability
-              icon={Users}
-              title="Workload you can see"
-              body="Who’s overloaded this week, before you assign one more thing."
-            />
-          </ul>
         </section>
       </main>
 
-      <footer className="border-t border-[#E7E2D9] bg-[#F6F4EF]">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-5 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-8">
-          <div className="flex items-center gap-2.5">
-            <Mark />
-            <span className="text-sm font-medium">Task Planner and Tracker</span>
-          </div>
-          <p className="text-xs text-[#8A8278]">
+      <footer className="border-t border-border">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-5 py-8 sm:flex-row sm:px-8">
+          <Logo />
+          <p className="text-sm text-muted-foreground">
             Plan it. Track it. Keep the rooms separate.
           </p>
         </div>
       </footer>
-    </div>
-  );
-}
-
-function Fact({
-  kicker,
-  title,
-  body,
-}: {
-  kicker: string;
-  title: string;
-  body: string;
-}) {
-  return (
-    <div className="bg-[#FFFDF8] px-6 py-8 sm:px-8">
-      <p className="text-[11px] tabular-nums text-[#A39A8E]">{kicker}</p>
-      <h3 className="mt-6 text-base font-semibold">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-[#5C6570]">{body}</p>
-    </div>
-  );
-}
-
-function RhythmRow({ n, q, a }: { n: string; q: string; a: string }) {
-  return (
-    <li className="grid gap-2 py-5 sm:grid-cols-[3rem_minmax(0,0.9fr)_minmax(0,1.1fr)] sm:items-baseline sm:gap-8">
-      <span className="text-xs tabular-nums text-[#A39A8E]">{n}</span>
-      <p className="font-medium">{q}</p>
-      <p className="text-sm leading-6 text-[#5C6570]">{a}</p>
-    </li>
-  );
-}
-
-function Capability({
-  icon: Icon,
-  title,
-  body,
-}: {
-  icon: typeof CheckSquare;
-  title: string;
-  body: string;
-}) {
-  return (
-    <li className="rounded-xl border border-[#E7E2D9] bg-white p-5">
-      <Icon className="h-4 w-4 text-[#635BFF]" />
-      <h3 className="mt-4 text-sm font-semibold">{title}</h3>
-      <p className="mt-1.5 text-sm leading-6 text-[#5C6570]">{body}</p>
-    </li>
-  );
-}
-
-function ProductPreview() {
-  return (
-    <div className="relative">
-      <div className="absolute -inset-3 rounded-[22px] bg-[#E7E2D9]/70" />
-      <div className="relative overflow-hidden rounded-[18px] border border-[#D9D3C8] bg-white shadow-[0_24px_60px_rgba(23,32,51,0.12)]">
-        <div className="flex items-center gap-2 border-b border-[#EEEAE3] bg-[#FAF8F4] px-4 py-2.5">
-          <span className="h-2 w-2 rounded-full bg-[#E7E2D9]" />
-          <span className="h-2 w-2 rounded-full bg-[#E7E2D9]" />
-          <span className="h-2 w-2 rounded-full bg-[#E7E2D9]" />
-          <span className="ml-2 text-[11px] text-[#8A8278]">Dashboard</span>
-        </div>
-        <div className="grid grid-cols-[44px_minmax(0,1fr)]">
-          <div className="flex flex-col items-center gap-3 bg-[#0B1220] py-4">
-            <span className="h-5 w-5 rounded bg-[#635BFF]" />
-            <span className="h-3 w-3 rounded-sm bg-white/20" />
-            <span className="h-3 w-3 rounded-sm bg-white/20" />
-            <span className="h-3 w-3 rounded-sm bg-white/20" />
-          </div>
-          <div className="space-y-4 bg-[#F8FAFC] p-4">
-            <div>
-              <p className="text-[11px] text-[#64748B]">Wednesday</p>
-              <p className="text-sm font-semibold">Welcome back</p>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <MiniStat label="Open" value="12" />
-              <MiniStat label="Overdue" value="2" warn />
-              <MiniStat label="Meetings" value="3" />
-            </div>
-            <div className="rounded-lg border border-[#E5E7EB] bg-white">
-              <div className="border-b border-[#E5E7EB] px-3 py-2 text-[11px] font-medium text-[#64748B]">
-                My work
-              </div>
-              <PreviewRow title="Ship review notes" meta="Website · Today" />
-              <PreviewRow title="Prep standup" meta="Ops · 10:00" />
-              <PreviewRow title="Fix overdue copy" meta="Launch · High" last />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MiniStat({
-  label,
-  value,
-  warn,
-}: {
-  label: string;
-  value: string;
-  warn?: boolean;
-}) {
-  return (
-    <div className="rounded-lg border border-[#E5E7EB] bg-white px-2.5 py-2">
-      <p className="text-[10px] text-[#64748B]">{label}</p>
-      <p
-        className={`text-lg font-semibold ${warn ? "text-[#EF4444]" : "text-[#172033]"}`}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
-
-function PreviewRow({
-  title,
-  meta,
-  last,
-}: {
-  title: string;
-  meta: string;
-  last?: boolean;
-}) {
-  return (
-    <div
-      className={`flex items-center gap-2.5 px-3 py-2.5 ${last ? "" : "border-b border-[#E5E7EB]"}`}
-    >
-      <span className="h-3.5 w-3.5 rounded border border-[#CBD5E1]" />
-      <div className="min-w-0">
-        <p className="truncate text-[13px] font-medium">{title}</p>
-        <p className="text-[10px] text-[#64748B]">{meta}</p>
-      </div>
     </div>
   );
 }

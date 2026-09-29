@@ -6,6 +6,13 @@ export function createQueryClient() {
     // Every failed mutation surfaces feedback, even where a view has no inline error slot.
     mutationCache: new MutationCache({
       onError: (error) => {
+        // Auth screens render their errors inline next to the form.
+        if (
+          typeof window !== "undefined" &&
+          /^\/(login|register|invite)(\/|$)/.test(window.location.pathname)
+        ) {
+          return;
+        }
         const message =
           error instanceof Error && error.message
             ? error.message

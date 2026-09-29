@@ -2,7 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
+import { Building2 } from "lucide-react";
 import { AuthCard, AuthLayout } from "@/components/auth/auth-layout";
+import { AppLoadingScreen } from "@/components/layout/app-loading";
+import { ErrorState } from "@/components/ui/empty-state";
+import { WorkspaceMark } from "@/features/workspaces/workspace-switcher";
 import { PendingInvitesBanner } from "@/components/layout/pending-invites-banner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,11 +34,7 @@ export default function CreateWorkspacePage() {
   }, [router, workspaces.data]);
 
   if (isLoading || !user) {
-    return (
-      <main className="flex min-h-full items-center justify-center bg-background">
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      </main>
-    );
+    return <AppLoadingScreen label="Loading…" />;
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -54,10 +54,13 @@ export default function CreateWorkspacePage() {
     >
       <PendingInvitesBanner />
       <AuthCard>
-        <h2 className="text-2xl font-semibold tracking-tight">
+        <span className="flex size-10 items-center justify-center rounded-lg bg-primary-soft text-primary-soft-foreground">
+          <Building2 className="size-5" />
+        </span>
+        <h1 className="mt-4 font-heading text-2xl font-semibold tracking-[-0.02em]">
           Create your workspace
-        </h2>
-        <p className="mt-1.5 text-sm text-muted-foreground">
+        </h1>
+        <p className="mt-1.5 text-base text-muted-foreground">
           You will be the owner. Switch between workspaces anytime from the
           sidebar.
         </p>
@@ -74,7 +77,16 @@ export default function CreateWorkspacePage() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="logo">Workspace logo</Label>
+            <Label htmlFor="logo">
+              Workspace logo <span className="font-normal text-muted-foreground">(optional)</span>
+            </Label>
+            <div className="flex items-center gap-3">
+              {logo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logo} alt="" className="size-10 shrink-0 rounded-lg object-cover" />
+              ) : (
+                <WorkspaceMark name={name || "W"} className="size-10 rounded-lg text-base" />
+              )}
             <Input
               id="logo"
               type="file"
@@ -94,29 +106,22 @@ export default function CreateWorkspacePage() {
                   });
               }}
             />
-            {logo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={logo}
-                alt=""
-                className="h-12 w-12 rounded-lg object-cover"
-              />
-            ) : null}
+            </div>
             {logoError ? (
-              <p className="text-sm text-destructive">{logoError}</p>
+              <p role="alert" className="text-sm text-danger-soft-foreground">{logoError}</p>
             ) : null}
           </div>
           {createWorkspace.error ? (
-            <p className="text-sm text-destructive">
-              {createWorkspace.error.message}
-            </p>
+            <ErrorState title="Couldn't create the workspace" description={createWorkspace.error.message} />
           ) : null}
           <Button
             className="w-full"
             type="submit"
-            disabled={!name.trim() || createWorkspace.isPending}
+            size="lg"
+            disabled={!name.trim()}
+            loading={createWorkspace.isPending}
           >
-            {createWorkspace.isPending ? "Creating..." : "Create workspace"}
+            Create workspace
           </Button>
         </form>
         <p className="mt-5 text-center text-xs text-muted-foreground">
